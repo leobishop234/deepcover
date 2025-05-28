@@ -14,11 +14,12 @@ import (
 type function struct {
 	ModuleName string
 	PkgName    string
+	PkgPath    string
 	FuncName   string
 }
 
-func GetDependencyFunctions(path, rootFunction string) ([]function, error) {
-	cg, err := generateCallgraph(path, rootFunction)
+func GetDependencyFunctions(path, TargetFunction string) ([]function, error) {
+	cg, err := generateCallgraph(path, TargetFunction)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +98,7 @@ func convertCallgraphToFunctions(cg *callgraph.Graph) ([]function, error) {
 		functions = append(functions, function{
 			ModuleName: module,
 			PkgName:    node.Func.Pkg.Pkg.Name(),
+			PkgPath:    node.Func.Pkg.Pkg.Path(),
 			FuncName:   node.Func.Name(),
 		})
 	}
