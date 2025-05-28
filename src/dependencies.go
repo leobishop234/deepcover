@@ -1,4 +1,4 @@
-package main
+package src
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ import (
 )
 
 type function struct {
-	moduleName string
-	pkgName    string
-	funcName   string
+	ModuleName string
+	PkgName    string
+	FuncName   string
 }
 
 func GetDependencyFunctions(path, rootFunction string) ([]function, error) {
@@ -50,12 +50,18 @@ func generateCallgraph(path, rootFunction string) (*callgraph.Graph, error) {
 		return nil, fmt.Errorf("failed to load packages: %v", err)
 	}
 
+	for _, pkg := range pkgs {
+		if len(pkg.Errors) > 0 {
+			return nil, fmt.Errorf("failed to load package %s: %v", pkg.PkgPath, pkg.Errors)
+		}
+	}
+
 	ssaProg, ssaPkgs := ssautil.AllPackages(pkgs, 0)
 	ssaProg.Build()
 
 	var targetFunc *ssa.Function
-	for _, pkg := range ssaPkgs {
-		for _, member := range pkg.Members {
+	for _, ssaPkg := range ssaPkgs {
+		for _, member := range ssaPkg.Members {
 			if fn, ok := member.(*ssa.Function); ok && fn.Name() == rootFunction {
 				targetFunc = fn
 				break
@@ -89,9 +95,9 @@ func convertCallgraphToFunctions(cg *callgraph.Graph) ([]function, error) {
 			continue
 		}
 		functions = append(functions, function{
-			moduleName: module,
-			pkgName:    node.Func.Pkg.Pkg.Name(),
-			funcName:   node.Func.Name(),
+			ModuleName: module,
+			PkgName:    node.Func.Pkg.Pkg.Name(),
+			FuncName:   node.Func.Name(),
 		})
 	}
 
@@ -101,7 +107,7 @@ func convertCallgraphToFunctions(cg *callgraph.Graph) ([]function, error) {
 func filterFunctionsByModule(functions []function, module string) []function {
 	filtered := []function{}
 	for _, function := range functions {
-		if function.moduleName == module {
+		if function.ModuleName == module {
 			filtered = append(filtered, function)
 		}
 	}

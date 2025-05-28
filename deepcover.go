@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"deepcover/src"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -32,13 +34,13 @@ func main() {
 				return fmt.Errorf("target function is required")
 			}
 
-			dependencies, err := GetDependencyFunctions(entrypoint, targetFunc)
+			dependencies, err := src.GetDependencyFunctions(entrypoint, targetFunc)
 			if err != nil {
 				return fmt.Errorf("failed to get dependencies: %v", err)
 			}
 
 			for _, dependency := range dependencies {
-				fmt.Printf("%s/%s/%s\n", dependency.moduleName, dependency.pkgName, dependency.funcName)
+				fmt.Printf("%s/%s/%s\n", dependency.ModuleName, dependency.PkgName, dependency.FuncName)
 			}
 
 			return nil
