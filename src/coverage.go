@@ -10,13 +10,13 @@ import (
 	"strings"
 )
 
-type FuncCoverage struct {
+type FunctionCoverage struct {
 	Path     string
 	Name     string
 	Coverage float64
 }
 
-func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FuncCoverage, error) {
+func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FunctionCoverage, error) {
 	output, err := getCoverage(path, targetRxp, expectedPackages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
@@ -58,10 +58,10 @@ func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, err
 	return output, nil
 }
 
-func parseCoverage(output []byte) ([]FuncCoverage, error) {
+func parseCoverage(output []byte) ([]FunctionCoverage, error) {
 	coverageRows := strings.Split(string(output), "\n")
 
-	funcCoverages := []FuncCoverage{}
+	funcCoverages := []FunctionCoverage{}
 	for _, row := range coverageRows {
 		funcCoverage, ok, err := parseCoverageRow(row)
 		if err != nil {
@@ -79,9 +79,9 @@ func parseCoverage(output []byte) ([]FuncCoverage, error) {
 
 var coverageRowRegex = regexp.MustCompile(`\t+`)
 
-func parseCoverageRow(row string) (FuncCoverage, bool, error) {
+func parseCoverageRow(row string) (FunctionCoverage, bool, error) {
 	if row == "" || strings.HasPrefix(strings.ToLower(row), "total") {
-		return FuncCoverage{}, false, nil
+		return FunctionCoverage{}, false, nil
 	}
 
 	row = strings.TrimSpace(row)
@@ -89,16 +89,16 @@ func parseCoverageRow(row string) (FuncCoverage, bool, error) {
 
 	parts := strings.Split(row, "\t")
 	if len(parts) < 3 {
-		return FuncCoverage{}, false, nil
+		return FunctionCoverage{}, false, nil
 	}
 
 	coverageStr := strings.TrimSuffix(parts[2], "%")
 	coverage, err := strconv.ParseFloat(coverageStr, 64)
 	if err != nil {
-		return FuncCoverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[2], err)
+		return FunctionCoverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[2], err)
 	}
 
-	return FuncCoverage{
+	return FunctionCoverage{
 		Path:     parts[0],
 		Name:     parts[1],
 		Coverage: coverage,
