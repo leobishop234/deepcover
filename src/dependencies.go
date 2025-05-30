@@ -24,14 +24,14 @@ func GetDependencyFunctions(path, TargetFunction string) ([]function, error) {
 		return nil, err
 	}
 
-	rootModule, hasRootModule, err := getModule(cg.Root)
+	rootModule, hasRootModule, err := getNodeModule(cg.Root)
 	if err != nil {
 		return nil, err
 	} else if !hasRootModule {
 		return nil, fmt.Errorf("root function is not in a module")
 	}
 
-	functions, err := convertCallgraphToFunctions(cg)
+	functions, err := parseCallgraph(cg)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +85,10 @@ func generateCallgraph(path, rootFunction string) (*callgraph.Graph, error) {
 	return cg, nil
 }
 
-func convertCallgraphToFunctions(cg *callgraph.Graph) ([]function, error) {
+func parseCallgraph(cg *callgraph.Graph) ([]function, error) {
 	functions := []function{}
 	for _, node := range cg.Nodes {
-		module, hasModule, err := getModule(node)
+		module, hasModule, err := getNodeModule(node)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ type knownPackage struct {
 
 var knownPackages = map[string]knownPackage{}
 
-func getModule(node *callgraph.Node) (string, bool, error) {
+func getNodeModule(node *callgraph.Node) (string, bool, error) {
 	if node.Func == nil || node.Func.Pkg == nil || node.Func.Pkg.Pkg == nil {
 		return "", false, nil
 	}

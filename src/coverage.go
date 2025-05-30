@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -76,35 +77,30 @@ func parseCoverage(output []byte) ([]FuncCoverage, error) {
 	return funcCoverages, nil
 }
 
+var coverageRowRegex = regexp.MustCompile(`\t+`)
+
 func parseCoverageRow(row string) (FuncCoverage, bool, error) {
 	if row == "" || strings.HasPrefix(strings.ToLower(row), "total") {
 		return FuncCoverage{}, false, nil
 	}
 
+	row = strings.TrimSpace(row)
+	row = coverageRowRegex.ReplaceAllString(row, "\t")
+
 	parts := strings.Split(row, "\t")
-	if len(parts) < 6 {
+	if len(parts) < 3 {
 		return FuncCoverage{}, false, nil
 	}
 
-	path := parts[0]
-
-	name := ""
-	for i := 1; i < len(parts)-1; i++ {
-		if parts[i] != "" {
-			name = parts[i]
-			break
-		}
-	}
-
-	coverageStr := strings.TrimSuffix(parts[len(parts)-1], "%")
+	coverageStr := strings.TrimSuffix(parts[2], "%")
 	coverage, err := strconv.ParseFloat(coverageStr, 64)
 	if err != nil {
-		return FuncCoverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[len(parts)-1], err)
+		return FuncCoverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[2], err)
 	}
 
 	return FuncCoverage{
-		Path:     path,
-		Name:     name,
+		Path:     parts[0],
+		Name:     parts[1],
 		Coverage: coverage,
 	}, true, nil
 }
