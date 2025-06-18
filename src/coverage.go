@@ -16,13 +16,13 @@ type FunctionCoverage struct {
 	Coverage float64
 }
 
-func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FunctionCoverage, error) {
-	output, err := getCoverage(path, targetRxp, expectedPackages)
+func GetCoverage(path, targetRxp string, dependencies []function) ([]FunctionCoverage, error) {
+	output, err := getCoverage(path, targetRxp, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
 	}
 
-	coverage, err := parseCoverage(output)
+	coverage, err := parseCoverage(output, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage: %v", err)
 	}
@@ -30,7 +30,17 @@ func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FunctionC
 	return coverage, nil
 }
 
-func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, error) {
+func getCoverage(path, targetRxp string, dependencies []function) ([]byte, error) {
+	packages := make(map[string]bool)
+	for _, dependency := range dependencies {
+		packages[dependency.PkgPath] = true
+	}
+
+	packagesList := make([]string, 0, len(packages))
+	for pkg := range packages {
+		packagesList = append(packagesList, pkg)
+	}
+
 	tmpDir, err := os.MkdirTemp("", "deepcover-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %v", err)
@@ -43,7 +53,7 @@ func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, err
 		"-run", targetRxp,
 		"-coverprofile="+coverageFile,
 		"-covermode=atomic",
-		"-coverpkg="+strings.Join(expectedPackages, ","),
+		"-coverpkg="+strings.Join(packagesList, ","),
 		path,
 	)
 	if err := cmd.Run(); err != nil {
@@ -58,7 +68,7 @@ func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, err
 	return output, nil
 }
 
-func parseCoverage(output []byte) ([]FunctionCoverage, error) {
+func parseCoverage(output []byte, dependencies []function) ([]FunctionCoverage, error) {
 	coverageRows := strings.Split(string(output), "\n")
 
 	funcCoverages := []FunctionCoverage{}
@@ -71,7 +81,12 @@ func parseCoverage(output []byte) ([]FunctionCoverage, error) {
 			continue
 		}
 
-		funcCoverages = append(funcCoverages, funcCoverage)
+		for _, dependency := range dependencies {
+			if strings.Contains(funcCoverage.Path, dependency.PkgPath) && funcCoverage.Name == dependency.FuncName {
+				funcCoverages = append(funcCoverages, funcCoverage)
+				break
+			}
+		}
 	}
 
 	return funcCoverages, nil

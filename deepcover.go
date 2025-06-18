@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	"deepcover/src"
@@ -41,14 +40,7 @@ func run(entrypoint, targetFunc string) error {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	expectedPackages := make([]string, 0)
-	for _, dependency := range dependencies {
-		if !slices.Contains(expectedPackages, dependency.PkgPath) {
-			expectedPackages = append(expectedPackages, dependency.PkgPath)
-		}
-	}
-
-	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, expectedPackages)
+	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, dependencies)
 	if err != nil {
 		return fmt.Errorf("failed to get coverage: %v", err)
 	}

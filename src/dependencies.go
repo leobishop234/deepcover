@@ -119,7 +119,6 @@ func getDependencies(cg *callgraph.Graph, rootModule string, targetFunction stri
 
 		for _, edge := range current.Out {
 			if !visited[edge.Callee] {
-				fmt.Println(edge.String())
 				queue = append(queue, edge.Callee)
 			}
 		}
