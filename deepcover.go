@@ -1,46 +1,37 @@
 package main
 
 import (
-	"context"
+	"flag"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
 
 	"deepcover/src"
-
-	"github.com/urfave/cli/v3"
 )
 
 func main() {
-	app := &cli.Command{
-		Name:        "deepcover",
-		Usage:       "Identifies deep test coverage for dependencies",
-		Description: "Analyzes test coverage starting from the specified entrypoint directory",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "run",
-				Aliases: []string{"r"},
-				Usage:   "Runs tests matching the provided regex",
-				Value:   "",
-			},
-		},
-		Action: run,
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 2 {
+		fmt.Fprintf(os.Stderr, "Error: Expected 2 arguments (entrypoint and target function)\n")
+		os.Exit(1)
 	}
 
-	if err := app.Run(context.Background(), os.Args); err != nil {
+	entrypoint := args[0]
+	targetFunc := args[1]
+
+	if err := run(entrypoint, targetFunc); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, cmd *cli.Command) error {
-	entrypoint := cmd.Args().Get(0)
+func run(entrypoint, targetFunc string) error {
 	if entrypoint == "" {
 		return fmt.Errorf("entrypoint is required")
 	}
 
-	targetFunc := cmd.Args().Get(1)
 	if targetFunc == "" {
 		return fmt.Errorf("target function is required")
 	}

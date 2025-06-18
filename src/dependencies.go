@@ -31,12 +31,12 @@ func GetDependencyFunctions(path, TargetFunction string) ([]function, error) {
 		return nil, fmt.Errorf("root function is not in a module")
 	}
 
-	functions, err := parseCallgraph(cg)
+	dependencies, err := getDependencies(cg, rootModule, TargetFunction)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterFunctionsByModule(functions, rootModule), nil
+	return dependencies, nil
 }
 
 func generateCallgraph(path, rootFunction string) (*callgraph.Graph, error) {
@@ -85,36 +85,49 @@ func generateCallgraph(path, rootFunction string) (*callgraph.Graph, error) {
 	return cg, nil
 }
 
-func parseCallgraph(cg *callgraph.Graph) ([]function, error) {
-	functions := []function{}
-	for _, node := range cg.Nodes {
-		module, hasModule, err := getNodeModule(node)
+func getDependencies(cg *callgraph.Graph, rootModule string, targetFunction string) ([]function, error) {
+	dependencies := []function{}
+
+	visited := map[*callgraph.Node]bool{}
+	queue := []*callgraph.Node{cg.Root}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current] {
+			continue
+		}
+
+		module, hasModule, err := getNodeModule(current)
 		if err != nil {
 			return nil, err
 		}
 		if !hasModule {
 			continue
 		}
-		functions = append(functions, function{
-			ModuleName: module,
-			PkgName:    node.Func.Pkg.Pkg.Name(),
-			PkgPath:    node.Func.Pkg.Pkg.Path(),
-			FuncName:   node.Func.Name(),
-		})
-	}
-
-	return functions, nil
-}
-
-func filterFunctionsByModule(functions []function, module string) []function {
-	filtered := []function{}
-	for _, function := range functions {
-		if function.ModuleName == module {
-			filtered = append(filtered, function)
+		if module != rootModule {
+			continue
 		}
+
+		dependencies = append(dependencies, function{
+			ModuleName: module,
+			PkgName:    current.Func.Pkg.Pkg.Name(),
+			PkgPath:    current.Func.Pkg.Pkg.Path(),
+			FuncName:   current.Func.Name(),
+		})
+
+		for _, edge := range current.Out {
+			if !visited[edge.Callee] {
+				fmt.Println(edge.String())
+				queue = append(queue, edge.Callee)
+			}
+		}
+
+		visited[current] = true
 	}
 
-	return filtered
+	return dependencies, nil
 }
 
 type knownPackage struct {
