@@ -35,7 +35,7 @@ func run(entrypoint, targetFunc string) error {
 		return fmt.Errorf("target function is required")
 	}
 
-	dependencies, err := src.GetDependencyFunctions(entrypoint, targetFunc)
+	dependencies, err := src.GetDependencies(entrypoint, targetFunc)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
