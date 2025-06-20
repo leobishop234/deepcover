@@ -180,30 +180,29 @@ func getNodeModule(node *callgraph.Node) (string, bool, error) {
 		return "", false, nil
 	}
 
-	pkg := node.Func.Pkg.Pkg.Path()
-
-	if known, ok := knownPackages[pkg]; ok {
+	pkgPath := node.Func.Pkg.Pkg.Path()
+	if known, ok := knownPackages[pkgPath]; ok {
 		return known.module, known.hasModule, nil
 	}
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedModule,
-	}, pkg)
+	}, pkgPath)
 	if err != nil {
 		return "", false, err
 	}
 
 	if len(pkgs) == 0 || pkgs[0].Module == nil {
-		knownPackages[pkg] = knownPackage{
+		knownPackages[pkgPath] = knownPackage{
 			hasModule: false,
 			module:    "",
 		}
 	} else {
-		knownPackages[pkg] = knownPackage{
+		knownPackages[pkgPath] = knownPackage{
 			hasModule: true,
 			module:    pkgs[0].Module.Path,
 		}
 	}
 
-	return knownPackages[pkg].module, knownPackages[pkg].hasModule, nil
+	return knownPackages[pkgPath].module, knownPackages[pkgPath].hasModule, nil
 }
