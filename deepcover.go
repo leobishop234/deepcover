@@ -39,18 +39,13 @@ func run(pkgPath string, targetRegex *regexp.Regexp) error {
 		return fmt.Errorf("pkg path is required")
 	}
 
-	dependencies, err := src.GetDependencies(pkgPath, targetRegex)
+	funcCoverages, err := src.Deepcover(pkgPath, targetRegex)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	for targetFunc, dependencies := range dependencies {
-		funcCoverages, err := src.GetCoverage(pkgPath, targetFunc, dependencies)
-		if err != nil {
-			return fmt.Errorf("failed to get coverage: %v", err)
-		}
-
-		displayCoverage(targetFunc, funcCoverages)
+	for target, funcCoverages := range funcCoverages {
+		displayCoverage(target, funcCoverages)
 	}
 
 	return nil
@@ -83,7 +78,7 @@ func displayCoverage(target string, funcCoverages []src.FunctionCoverage) {
 		coverageStr := fmt.Sprintf("%.1f%%", funcCoverage.Coverage)
 		fmt.Printf("%-*s %-*s %-*s %-*s\n",
 			targetLen,
-			target,
+			truncateString(target, targetLen),
 			pathLen,
 			truncateString(funcCoverage.Path, pathLen),
 			nameLen,
