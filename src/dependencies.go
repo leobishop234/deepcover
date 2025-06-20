@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
+	"regexp"
 
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/callgraph/cha"
@@ -19,8 +20,8 @@ type function struct {
 	FuncName   string
 }
 
-func GetDependencies(path, TargetFunction string) (map[string][]function, error) {
-	cgs, err := buildCallgraphs(path, []string{TargetFunction})
+func GetDependencies(path string, targetRegex *regexp.Regexp) (map[string][]function, error) {
+	cgs, err := buildCallgraphs(path, targetRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -37,13 +38,13 @@ func GetDependencies(path, TargetFunction string) (map[string][]function, error)
 	return results, nil
 }
 
-func buildCallgraphs(path string, targets []string) (map[string]*callgraph.Graph, error) {
+func buildCallgraphs(path string, targetRegex *regexp.Regexp) (map[string]*callgraph.Graph, error) {
 	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), path)
 	if err != nil {
 		return nil, err
 	}
 
-	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targets)
+	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targetRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -84,20 +85,16 @@ func buildSSA(conf *packages.Config, path string) (*ssa.Program, []*ssa.Package,
 	return ssaProg, ssaPkgs, nil
 }
 
-func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targets []string) ([]*ssa.Function, error) {
+func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targetRegex *regexp.Regexp) ([]*ssa.Function, error) {
 	var targetFuncs []*ssa.Function
 	for _, ssaPkg := range ssaPkgs {
 		for _, member := range ssaPkg.Members {
-			for _, target := range targets {
-				if fn, ok := member.(*ssa.Function); ok && fn.Name() == target {
+			if fn, ok := member.(*ssa.Function); ok {
+				if targetRegex.MatchString(fn.Name()) {
 					targetFuncs = append(targetFuncs, fn)
 				}
 			}
 		}
-	}
-
-	if len(targetFuncs) != len(targets) {
-		return nil, fmt.Errorf("failed to find all target functions")
 	}
 
 	return targetFuncs, nil

@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"regexp"
 	"strings"
 
 	"deepcover/src"
@@ -13,46 +15,51 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "Error: Expected 2 arguments (entrypoint and target function)\n")
+		fmt.Fprintf(os.Stderr, "Error: Expected 2 arguments (pkg path and target regex)\n")
 		os.Exit(1)
 	}
 
-	entrypoint := args[0]
-	targetFunc := args[1]
+	pkgPath := args[0]
+	targetRegexStr := args[1]
 
-	if err := run(entrypoint, targetFunc); err != nil {
+	targetRegex, err := regexp.Compile(targetRegexStr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Invalid target regex: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := run(pkgPath, targetRegex); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(entrypoint, targetFunc string) error {
-	if entrypoint == "" {
-		return fmt.Errorf("entrypoint is required")
+func run(pkgPath string, targetRegex *regexp.Regexp) error {
+	if pkgPath == "" {
+		return fmt.Errorf("pkg path is required")
 	}
 
-	if targetFunc == "" {
-		return fmt.Errorf("target function is required")
-	}
-
-	dependencies, err := src.GetDependencies(entrypoint, targetFunc)
+	dependencies, err := src.GetDependencies(pkgPath, targetRegex)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, dependencies[targetFunc])
-	if err != nil {
-		return fmt.Errorf("failed to get coverage: %v", err)
-	}
+	for targetFunc, dependencies := range dependencies {
+		funcCoverages, err := src.GetCoverage(pkgPath, targetFunc, dependencies)
+		if err != nil {
+			return fmt.Errorf("failed to get coverage: %v", err)
+		}
 
-	displayCoverage(funcCoverages)
+		displayCoverage(targetFunc, funcCoverages)
+	}
 
 	return nil
 }
 
-func displayCoverage(funcCoverages []src.FunctionCoverage) {
-	var pathLen, nameLen, coverageLen int
+func displayCoverage(target string, funcCoverages []src.FunctionCoverage) {
+	targetLen := int(math.Max(float64(len(target)+2), float64(len("TARGET"))))
 
+	var pathLen, nameLen, coverageLen int
 	for _, funcCoverage := range funcCoverages {
 		if len(funcCoverage.Path) > pathLen {
 			pathLen = len(funcCoverage.Path)
@@ -68,13 +75,15 @@ func displayCoverage(funcCoverages []src.FunctionCoverage) {
 	nameLen += 2
 	coverageLen += 2
 
-	title := fmt.Sprintf("%-*s %-*s %-*s", pathLen, "PATH", nameLen, "FUNCTION", coverageLen, "COVERAGE")
+	title := fmt.Sprintf("%-*s %-*s %-*s %-*s", targetLen, "TARGET", pathLen, "PATH", nameLen, "FUNCTION", coverageLen, "COVERAGE")
 	fmt.Println(title)
 	fmt.Println(strings.Repeat("-", len(title)))
 
 	for _, funcCoverage := range funcCoverages {
 		coverageStr := fmt.Sprintf("%.1f%%", funcCoverage.Coverage)
-		fmt.Printf("%-*s %-*s %-*s\n",
+		fmt.Printf("%-*s %-*s %-*s %-*s\n",
+			targetLen,
+			target,
 			pathLen,
 			truncateString(funcCoverage.Path, pathLen),
 			nameLen,
