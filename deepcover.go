@@ -40,7 +40,7 @@ func run(entrypoint, targetFunc string) error {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, dependencies)
+	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, dependencies[targetFunc])
 	if err != nil {
 		return fmt.Errorf("failed to get coverage: %v", err)
 	}
