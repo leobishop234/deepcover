@@ -42,21 +42,17 @@ func GetDependencies(path, TargetFunction string) ([]function, error) {
 }
 
 func buildCallgraphs(path string, targets []string) ([]*callgraph.Graph, error) {
-	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), targets)
+	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), path)
 	if err != nil {
 		return nil, err
 	}
 
-	var cgs []*callgraph.Graph
-	for _, target := range targets {
-		cg, err := generateCallgraph(ssaProg, ssaPkgs, cha.CallGraph, target)
-		if err != nil {
-			return nil, err
-		}
-		cgs = append(cgs, cg)
+	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targets)
+	if err != nil {
+		return nil, err
 	}
 
-	return cgs, nil
+	return generateCallgraphs(ssaProg, cha.CallGraph, targetFuncs)
 }
 
 func chaConfig() *packages.Config {
@@ -67,8 +63,8 @@ func chaConfig() *packages.Config {
 	}
 }
 
-func buildSSA(conf *packages.Config, targets []string) (*ssa.Program, []*ssa.Package, error) {
-	pkgs, err := packages.Load(conf, targets...)
+func buildSSA(conf *packages.Config, path string) (*ssa.Program, []*ssa.Package, error) {
+	pkgs, err := packages.Load(conf, path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load packages: %v", err)
 	}
@@ -89,30 +85,40 @@ func buildSSA(conf *packages.Config, targets []string) (*ssa.Program, []*ssa.Pac
 	return ssaProg, ssaPkgs, nil
 }
 
-func generateCallgraph(ssaProg *ssa.Program, ssaPkgs []*ssa.Package, builder func(prog *ssa.Program) *callgraph.Graph, targetName string) (*callgraph.Graph, error) {
-	var targetFunc *ssa.Function
+func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targets []string) ([]*ssa.Function, error) {
+	var targetFuncs []*ssa.Function
 	for _, ssaPkg := range ssaPkgs {
 		for _, member := range ssaPkg.Members {
-			if fn, ok := member.(*ssa.Function); ok && fn.Name() == targetName {
-				targetFunc = fn
-				break
+			for _, target := range targets {
+				if fn, ok := member.(*ssa.Function); ok && fn.Name() == target {
+					targetFuncs = append(targetFuncs, fn)
+				}
 			}
 		}
 	}
 
-	if targetFunc == nil {
-		return nil, fmt.Errorf("target function %s not found", targetName)
+	if len(targetFuncs) != len(targets) {
+		return nil, fmt.Errorf("failed to find all target functions")
 	}
 
-	cg := builder(ssaProg)
-	cg.DeleteSyntheticNodes()
+	return targetFuncs, nil
+}
 
-	var ok bool
-	if cg.Root, ok = cg.Nodes[targetFunc]; !ok {
-		return nil, fmt.Errorf("failed to find callgraph node for function %s", targetName)
+func generateCallgraphs(ssaProg *ssa.Program, builder func(prog *ssa.Program) *callgraph.Graph, targets []*ssa.Function) ([]*callgraph.Graph, error) {
+	var cgs []*callgraph.Graph
+	for _, target := range targets {
+		cg := builder(ssaProg)
+		cg.DeleteSyntheticNodes()
+
+		var ok bool
+		if cg.Root, ok = cg.Nodes[target]; !ok {
+			return nil, fmt.Errorf("failed to find callgraph node for function %s", target.Name())
+		}
+
+		cgs = append(cgs, cg)
 	}
 
-	return cg, nil
+	return cgs, nil
 }
 
 func getDependencies(cg *callgraph.Graph, rootModule string, targetFunction string) ([]function, error) {
