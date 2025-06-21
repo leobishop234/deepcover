@@ -1,75 +1,60 @@
 package main
 
 import (
-	"context"
+	"flag"
 	"fmt"
+	"math"
 	"os"
-	"slices"
+	"regexp"
 	"strings"
 
 	"deepcover/src"
-
-	"github.com/urfave/cli/v3"
 )
 
 func main() {
-	app := &cli.Command{
-		Name:        "deepcover",
-		Usage:       "Identifies deep test coverage for dependencies",
-		Description: "Analyzes test coverage starting from the specified entrypoint directory",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "run",
-				Aliases: []string{"r"},
-				Usage:   "Runs tests matching the provided regex",
-				Value:   "",
-			},
-		},
-		Action: run,
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 2 {
+		fmt.Fprintf(os.Stderr, "Error: Expected 2 arguments (pkg path and target regex)\n")
+		os.Exit(1)
 	}
 
-	if err := app.Run(context.Background(), os.Args); err != nil {
+	pkgPath := args[0]
+	targetRegexStr := args[1]
+
+	targetRegex, err := regexp.Compile(targetRegexStr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Invalid target regex: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := run(pkgPath, targetRegex); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, cmd *cli.Command) error {
-	entrypoint := cmd.Args().Get(0)
-	if entrypoint == "" {
-		return fmt.Errorf("entrypoint is required")
+func run(pkgPath string, targetRegex *regexp.Regexp) error {
+	if pkgPath == "" {
+		return fmt.Errorf("pkg path is required")
 	}
 
-	targetFunc := cmd.Args().Get(1)
-	if targetFunc == "" {
-		return fmt.Errorf("target function is required")
-	}
-
-	dependencies, err := src.GetDependencyFunctions(entrypoint, targetFunc)
+	funcCoverages, err := src.Deepcover(pkgPath, targetRegex)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	expectedPackages := make([]string, 0)
-	for _, dependency := range dependencies {
-		if !slices.Contains(expectedPackages, dependency.PkgPath) {
-			expectedPackages = append(expectedPackages, dependency.PkgPath)
-		}
+	for target, funcCoverages := range funcCoverages {
+		displayCoverage(target, funcCoverages)
 	}
-
-	funcCoverages, err := src.GetCoverage(entrypoint, targetFunc, expectedPackages)
-	if err != nil {
-		return fmt.Errorf("failed to get coverage: %v", err)
-	}
-
-	displayCoverage(funcCoverages)
 
 	return nil
 }
 
-func displayCoverage(funcCoverages []src.FunctionCoverage) {
-	var pathLen, nameLen, coverageLen int
+func displayCoverage(target string, funcCoverages []src.Coverage) {
+	targetLen := int(math.Max(float64(len(target)+2), float64(len("TARGET"))))
 
+	var pathLen, nameLen, coverageLen int
 	for _, funcCoverage := range funcCoverages {
 		if len(funcCoverage.Path) > pathLen {
 			pathLen = len(funcCoverage.Path)
@@ -85,13 +70,15 @@ func displayCoverage(funcCoverages []src.FunctionCoverage) {
 	nameLen += 2
 	coverageLen += 2
 
-	title := fmt.Sprintf("%-*s %-*s %-*s", pathLen, "PATH", nameLen, "FUNCTION", coverageLen, "COVERAGE")
+	title := fmt.Sprintf("%-*s %-*s %-*s %-*s", targetLen, "TARGET", pathLen, "PATH", nameLen, "FUNCTION", coverageLen, "COVERAGE")
 	fmt.Println(title)
 	fmt.Println(strings.Repeat("-", len(title)))
 
 	for _, funcCoverage := range funcCoverages {
 		coverageStr := fmt.Sprintf("%.1f%%", funcCoverage.Coverage)
-		fmt.Printf("%-*s %-*s %-*s\n",
+		fmt.Printf("%-*s %-*s %-*s %-*s\n",
+			targetLen,
+			truncateString(target, targetLen),
 			pathLen,
 			truncateString(funcCoverage.Path, pathLen),
 			nameLen,

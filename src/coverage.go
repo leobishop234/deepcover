@@ -10,19 +10,32 @@ import (
 	"strings"
 )
 
-type FunctionCoverage struct {
+type Coverage struct {
 	Path     string
 	Name     string
 	Coverage float64
 }
 
-func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FunctionCoverage, error) {
-	output, err := getCoverage(path, targetRxp, expectedPackages)
+func getCoverage(path string, dependencies map[string][]dependency) (map[string][]Coverage, error) {
+	results := make(map[string][]Coverage, len(dependencies))
+	for target, dependencies := range dependencies {
+		funcCoverages, err := getTestCoverage(path, target, dependencies)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get coverage: %v", err)
+		}
+		results[target] = funcCoverages
+	}
+
+	return results, nil
+}
+
+func getTestCoverage(path, target string, dependencies []dependency) ([]Coverage, error) {
+	output, err := runTest(path, target, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
 	}
 
-	coverage, err := parseCoverage(output)
+	coverage, err := parseCoverage(output, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage: %v", err)
 	}
@@ -30,7 +43,17 @@ func GetCoverage(path, targetRxp string, expectedPackages []string) ([]FunctionC
 	return coverage, nil
 }
 
-func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, error) {
+func runTest(path, target string, dependencies []dependency) ([]byte, error) {
+	packages := make(map[string]bool)
+	for _, dependency := range dependencies {
+		packages[dependency.PkgPath] = true
+	}
+
+	packagesList := make([]string, 0, len(packages))
+	for pkg := range packages {
+		packagesList = append(packagesList, pkg)
+	}
+
 	tmpDir, err := os.MkdirTemp("", "deepcover-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %v", err)
@@ -40,10 +63,10 @@ func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, err
 	coverageFile := filepath.Join(tmpDir, "coverage.out")
 	cmd := exec.Command(
 		"go", "test",
-		"-run", targetRxp,
+		"-run", target,
 		"-coverprofile="+coverageFile,
 		"-covermode=atomic",
-		"-coverpkg="+strings.Join(expectedPackages, ","),
+		"-coverpkg="+strings.Join(packagesList, ","),
 		path,
 	)
 	if err := cmd.Run(); err != nil {
@@ -58,10 +81,10 @@ func getCoverage(path, targetRxp string, expectedPackages []string) ([]byte, err
 	return output, nil
 }
 
-func parseCoverage(output []byte) ([]FunctionCoverage, error) {
+func parseCoverage(output []byte, dependencies []dependency) ([]Coverage, error) {
 	coverageRows := strings.Split(string(output), "\n")
 
-	funcCoverages := []FunctionCoverage{}
+	funcCoverages := []Coverage{}
 	for _, row := range coverageRows {
 		funcCoverage, ok, err := parseCoverageRow(row)
 		if err != nil {
@@ -71,7 +94,12 @@ func parseCoverage(output []byte) ([]FunctionCoverage, error) {
 			continue
 		}
 
-		funcCoverages = append(funcCoverages, funcCoverage)
+		for _, dependency := range dependencies {
+			if strings.Contains(funcCoverage.Path, dependency.PkgPath) && funcCoverage.Name == dependency.FuncName {
+				funcCoverages = append(funcCoverages, funcCoverage)
+				break
+			}
+		}
 	}
 
 	return funcCoverages, nil
@@ -79,9 +107,9 @@ func parseCoverage(output []byte) ([]FunctionCoverage, error) {
 
 var coverageRowRegex = regexp.MustCompile(`\t+`)
 
-func parseCoverageRow(row string) (FunctionCoverage, bool, error) {
+func parseCoverageRow(row string) (Coverage, bool, error) {
 	if row == "" || strings.HasPrefix(strings.ToLower(row), "total") {
-		return FunctionCoverage{}, false, nil
+		return Coverage{}, false, nil
 	}
 
 	row = strings.TrimSpace(row)
@@ -89,16 +117,16 @@ func parseCoverageRow(row string) (FunctionCoverage, bool, error) {
 
 	parts := strings.Split(row, "\t")
 	if len(parts) < 3 {
-		return FunctionCoverage{}, false, nil
+		return Coverage{}, false, nil
 	}
 
 	coverageStr := strings.TrimSuffix(parts[2], "%")
 	coverage, err := strconv.ParseFloat(coverageStr, 64)
 	if err != nil {
-		return FunctionCoverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[2], err)
+		return Coverage{}, false, fmt.Errorf("invalid coverage percentage %q: %w", parts[2], err)
 	}
 
-	return FunctionCoverage{
+	return Coverage{
 		Path:     parts[0],
 		Name:     parts[1],
 		Coverage: coverage,
