@@ -51,7 +51,7 @@ func run(pkgPath string, targetRegex *regexp.Regexp) error {
 	return nil
 }
 
-func displayCoverage(target string, funcCoverages []src.FunctionCoverage) {
+func displayCoverage(target string, funcCoverages []src.Coverage) {
 	targetLen := int(math.Max(float64(len(target)+2), float64(len("TARGET"))))
 
 	var pathLen, nameLen, coverageLen int

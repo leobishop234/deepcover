@@ -1,123 +1,33 @@
 package src
 
 import (
-	"errors"
 	"fmt"
-	"go/token"
-	"regexp"
 
 	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/callgraph/cha"
 	"golang.org/x/tools/go/packages"
-	"golang.org/x/tools/go/ssa"
-	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-type function struct {
+type dependency struct {
 	ModuleName string
 	PkgName    string
 	PkgPath    string
 	FuncName   string
 }
 
-func GetDependencies(path string, targetRegex *regexp.Regexp) (map[string][]function, error) {
-	cgs, err := buildCallgraphs(path, targetRegex)
-	if err != nil {
-		return nil, err
-	}
-
-	results := make(map[string][]function, len(cgs))
+func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, error) {
+	dependencies := make(map[string][]dependency, len(cgs))
+	var err error
 	for target, cg := range cgs {
-		dependencies, err := getDependencies(cg)
+		dependencies[target], err = extractDependencies(cg)
 		if err != nil {
 			return nil, err
 		}
-		results[target] = dependencies
 	}
 
-	return results, nil
+	return dependencies, nil
 }
 
-func buildCallgraphs(path string, targetRegex *regexp.Regexp) (map[string]*callgraph.Graph, error) {
-	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), path)
-	if err != nil {
-		return nil, err
-	}
-
-	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targetRegex)
-	if err != nil {
-		return nil, err
-	}
-
-	return generateCallgraphs(ssaProg, cha.CallGraph, targetFuncs)
-}
-
-func chaConfig() *packages.Config {
-	return &packages.Config{
-		Mode:  packages.LoadSyntax | packages.NeedDeps | packages.NeedModule,
-		Tests: true,
-		Fset:  token.NewFileSet(),
-	}
-}
-
-func buildSSA(conf *packages.Config, path string) (*ssa.Program, []*ssa.Package, error) {
-	pkgs, err := packages.Load(conf, path)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load packages: %v", err)
-	}
-	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("no packages found")
-	}
-
-	errs := []error{}
-	for _, pkg := range pkgs {
-		if len(pkg.Errors) > 0 {
-			errs = append(errs, fmt.Errorf("failed to load package %s: %v", pkg.PkgPath, pkg.Errors))
-		}
-	}
-	if len(errs) > 0 {
-		return nil, nil, errors.Join(errs...)
-	}
-
-	ssaProg, ssaPkgs := ssautil.AllPackages(pkgs, 0)
-	ssaProg.Build()
-
-	return ssaProg, ssaPkgs, nil
-}
-
-func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targetRegex *regexp.Regexp) ([]*ssa.Function, error) {
-	var targetFuncs []*ssa.Function
-	for _, ssaPkg := range ssaPkgs {
-		for _, member := range ssaPkg.Members {
-			if fn, ok := member.(*ssa.Function); ok {
-				if targetRegex.MatchString(fn.Name()) {
-					targetFuncs = append(targetFuncs, fn)
-				}
-			}
-		}
-	}
-
-	return targetFuncs, nil
-}
-
-func generateCallgraphs(ssaProg *ssa.Program, builder func(prog *ssa.Program) *callgraph.Graph, targets []*ssa.Function) (map[string]*callgraph.Graph, error) {
-	cgs := map[string]*callgraph.Graph{}
-	for _, target := range targets {
-		cg := builder(ssaProg)
-		cg.DeleteSyntheticNodes()
-
-		var ok bool
-		if cg.Root, ok = cg.Nodes[target]; !ok {
-			return nil, fmt.Errorf("failed to find callgraph node for function %s", target.Name())
-		}
-
-		cgs[target.Name()] = cg
-	}
-
-	return cgs, nil
-}
-
-func getDependencies(cg *callgraph.Graph) ([]function, error) {
+func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
 	rootModule, hasRootModule, err := getNodeModule(cg.Root)
 	if err != nil {
 		return nil, err
@@ -125,7 +35,7 @@ func getDependencies(cg *callgraph.Graph) ([]function, error) {
 		return nil, fmt.Errorf("root function is not in a module")
 	}
 
-	dependencies := []function{}
+	dependencies := []dependency{}
 
 	visited := map[*callgraph.Node]bool{}
 	queue := []*callgraph.Node{cg.Root}
@@ -149,7 +59,7 @@ func getDependencies(cg *callgraph.Graph) ([]function, error) {
 			continue
 		}
 
-		dependencies = append(dependencies, function{
+		dependencies = append(dependencies, dependency{
 			ModuleName: module,
 			PkgName:    current.Func.Pkg.Pkg.Name(),
 			PkgPath:    current.Func.Pkg.Pkg.Path(),

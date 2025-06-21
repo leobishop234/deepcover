@@ -1,24 +1,19 @@
 package src
 
 import (
-	"fmt"
 	"regexp"
 )
 
-func Deepcover(pkgPath string, targetRegex *regexp.Regexp) (map[string][]FunctionCoverage, error) {
-	dependencies, err := GetDependencies(pkgPath, targetRegex)
+func Deepcover(pkgPath string, targetRegex *regexp.Regexp) (map[string][]Coverage, error) {
+	cgs, err := buildCallgraphs(pkgPath, targetRegex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get dependencies: %v", err)
+		return nil, err
 	}
 
-	results := make(map[string][]FunctionCoverage, len(dependencies))
-	for targetFunc, dependencies := range dependencies {
-		funcCoverages, err := GetCoverage(pkgPath, targetFunc, dependencies)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get coverage: %v", err)
-		}
-		results[targetFunc] = funcCoverages
+	dependencies, err := getDependencies(cgs)
+	if err != nil {
+		return nil, err
 	}
 
-	return results, nil
+	return getCoverage(pkgPath, dependencies)
 }
