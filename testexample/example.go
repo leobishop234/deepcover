@@ -7,8 +7,12 @@ func Top() {
 }
 
 func Bottom() {
-	subpkg.SubPkg()
+	subpkg.SubPkg(subpkg.Enum1)
 
 	inter := newInterface()
 	inter.Method()
+}
+
+func Alternative() {
+	subpkg.SubPkg(subpkg.Enum2)
 }

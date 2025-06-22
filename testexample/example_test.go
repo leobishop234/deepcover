@@ -9,3 +9,7 @@ func TestTop(t *testing.T) {
 func TestBottom(t *testing.T) {
 	Bottom()
 }
+
+func TestAlternative(t *testing.T) {
+	Alternative()
+}
