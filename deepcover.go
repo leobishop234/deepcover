@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"deepcover/src"
+	"deepcover/src/cover"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func run(pkgPath string, targetRegex *regexp.Regexp) error {
 		return fmt.Errorf("pkg path is required")
 	}
 
-	funcCoverages, err := src.Deepcover(pkgPath, targetRegex)
+	funcCoverages, err := cover.Deepcover(pkgPath, targetRegex)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
@@ -51,7 +51,7 @@ func run(pkgPath string, targetRegex *regexp.Regexp) error {
 	return nil
 }
 
-func displayCoverage(target string, funcCoverages []src.Coverage) {
+func displayCoverage(target string, funcCoverages []cover.Coverage) {
 	targetLen := int(math.Max(float64(len(target)+2), float64(len("TARGET"))))
 
 	var pathLen, nameLen, coverageLen int
