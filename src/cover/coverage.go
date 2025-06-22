@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,76 +15,67 @@ type Coverage struct {
 	Coverage float64
 }
 
-func getCoverage(path string, dependencies map[string][]dependency) (map[string][]Coverage, error) {
-	results := make(map[string][]Coverage, len(dependencies))
-	for target, dependencies := range dependencies {
-		funcCoverages, err := getTestCoverage(path, target, dependencies)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get coverage: %v", err)
-		}
-		results[target] = funcCoverages
-	}
-
-	return results, nil
-}
-
-func getTestCoverage(path, target string, dependencies []dependency) ([]Coverage, error) {
-	output, err := runTest(path, target, dependencies)
+func getCoverage(path, target string, dependenciesByTarget map[string][]dependency) ([]Coverage, error) {
+	dependencies := collapseDependencies(dependenciesByTarget)
+	coverage, err := runTests(path, target, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
-	}
-
-	coverage, err := parseCoverage(output, dependencies)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse coverage: %v", err)
 	}
 
 	return coverage, nil
 }
 
-func runTest(path, target string, dependencies []dependency) ([]byte, error) {
-	packages := make(map[string]bool)
-	for _, dependency := range dependencies {
-		packages[dependency.PkgPath] = true
+func collapseDependencies(dependencies map[string][]dependency) []dependency {
+	depMap := make(map[dependency]bool)
+	for _, deps := range dependencies {
+		for _, dep := range deps {
+			depMap[dep] = true
+		}
 	}
 
-	packagesList := make([]string, 0, len(packages))
-	for pkg := range packages {
-		packagesList = append(packagesList, pkg)
+	collapsed := make([]dependency, 0, len(depMap))
+	for dep := range depMap {
+		collapsed = append(collapsed, dep)
 	}
 
-	tmpDir, err := os.MkdirTemp("", "deepcover-*")
+	return collapsed
+}
+
+func runTests(path, target string, dependencies []dependency) ([]Coverage, error) {
+	packages := make([]string, len(dependencies))
+	for i, dependency := range dependencies {
+		packages[i] = dependency.PkgPath
+	}
+
+	coverageFile, err := os.CreateTemp("", "deepcover-*.out")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %v", err)
+		return nil, fmt.Errorf("failed to create temp file: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.Remove(coverageFile.Name())
 
-	coverageFile := filepath.Join(tmpDir, "coverage.out")
 	cmd := exec.Command(
 		"go", "test",
 		"-run", target,
-		"-coverprofile="+coverageFile,
+		"-coverprofile="+coverageFile.Name(),
 		"-covermode=atomic",
-		"-coverpkg="+strings.Join(packagesList, ","),
+		"-coverpkg="+strings.Join(packages, ","),
 		path,
 	)
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("failed to run tests: %v", err)
 	}
 
-	output, err := exec.Command("go", "tool", "cover", "-func="+coverageFile).Output()
+	output, err := exec.Command(
+		"go", "tool", "cover",
+		"-func="+coverageFile.Name(),
+	).Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage: %v", err)
 	}
 
-	return output, nil
-}
-
-func parseCoverage(output []byte, dependencies []dependency) ([]Coverage, error) {
-	coverageRows := strings.Split(string(output), "\n")
-
-	funcCoverages := []Coverage{}
-	for _, row := range coverageRows {
+	rows := strings.Split(string(output), "\n")
+	coverage := []Coverage{}
+	for _, row := range rows {
 		funcCoverage, ok, err := parseCoverageRow(row)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract coverage: %v", err)
@@ -96,13 +86,13 @@ func parseCoverage(output []byte, dependencies []dependency) ([]Coverage, error)
 
 		for _, dependency := range dependencies {
 			if strings.Contains(funcCoverage.Path, dependency.PkgPath) && funcCoverage.Name == dependency.FuncName {
-				funcCoverages = append(funcCoverages, funcCoverage)
+				coverage = append(coverage, funcCoverage)
 				break
 			}
 		}
 	}
 
-	return funcCoverages, nil
+	return coverage, nil
 }
 
 var coverageRowRegex = regexp.MustCompile(`\t+`)
