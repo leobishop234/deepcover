@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"regexp"
 	"strings"
 
-	"deepcover/src"
+	"deepcover/src/cover"
 )
 
 func main() {
@@ -20,38 +19,30 @@ func main() {
 	}
 
 	pkgPath := args[0]
-	targetRegexStr := args[1]
+	target := args[1]
 
-	targetRegex, err := regexp.Compile(targetRegexStr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Invalid target regex: %v\n", err)
-		os.Exit(1)
-	}
-
-	if err := run(pkgPath, targetRegex); err != nil {
+	if err := run(pkgPath, target); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(pkgPath string, targetRegex *regexp.Regexp) error {
+func run(pkgPath, target string) error {
 	if pkgPath == "" {
 		return fmt.Errorf("pkg path is required")
 	}
 
-	funcCoverages, err := src.Deepcover(pkgPath, targetRegex)
+	coverage, err := cover.Deepcover(pkgPath, target)
 	if err != nil {
 		return fmt.Errorf("failed to get dependencies: %v", err)
 	}
 
-	for target, funcCoverages := range funcCoverages {
-		displayCoverage(target, funcCoverages)
-	}
+	displayCoverage(target, coverage)
 
 	return nil
 }
 
-func displayCoverage(target string, funcCoverages []src.Coverage) {
+func displayCoverage(target string, funcCoverages []cover.Coverage) {
 	targetLen := int(math.Max(float64(len(target)+2), float64(len("TARGET"))))
 
 	var pathLen, nameLen, coverageLen int
