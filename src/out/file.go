@@ -1,9 +1,10 @@
 package out
 
 import (
-	"deepcover/src/cover"
 	"fmt"
 	"os"
+
+	"github.com/leobishop234/deepcover/src/cover"
 )
 
 func SaveFile(path string, coverage []cover.Coverage) error {
