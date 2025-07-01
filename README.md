@@ -67,7 +67,7 @@ deepcover/testexample/subpkg/subtest.go:12:   SubPkg         75.0%
 ```
 ## Requirements
 
-- Go 1.24.2 or later
+- Go >= 1.22
 - The target package must be part of a Go module
 
 ## License
