@@ -1,4 +1,4 @@
-module deepcover
+module github.com/leobishop234/deepcover
 
 go 1.22
 

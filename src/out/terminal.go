@@ -1,9 +1,10 @@
 package out
 
 import (
-	"deepcover/src/cover"
 	"fmt"
 	"strings"
+
+	"github.com/leobishop234/deepcover/src/cover"
 )
 
 func PrintCoverage(coverage []cover.Coverage) {

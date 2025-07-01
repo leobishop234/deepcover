@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"deepcover/src/cover"
-	"deepcover/src/out"
+	"github.com/leobishop234/deepcover/src/cover"
+	"github.com/leobishop234/deepcover/src/out"
 )
 
 func main() {

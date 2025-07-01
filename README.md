@@ -4,13 +4,13 @@ Deepcover is a Go CLI tool to calculate deep code coverage for your go tests by 
 
 ## Installation
 ```bash
-go install github.com/yourusername/deepcover@latest
+go install github.com/leobishop234/deepcover@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/yourusername/deepcover
+git clone https://github.com/leobishop234/deepcover
 cd deepcover
 go build -o deepcover
 ```
