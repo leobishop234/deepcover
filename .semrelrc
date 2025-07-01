@@ -1,0 +1,41 @@
+{
+  "plugins": {
+    "provider": {
+      "name": "github"
+    },
+    "ci-condition": {
+      "name": "github"
+    },
+    "commit-analyzer": {
+      "name": "default",
+      "options": {
+        "releaseRules": [
+          {
+            "type": "chore",
+            "scope": "deps",
+            "release": "patch"
+          },
+          {
+            "type": "chore", 
+            "scope": "go",
+            "release": "patch"
+          },
+          {
+            "type": "refactor",
+            "scope": "perf",
+            "release": "patch"
+          }
+        ]
+      }
+    },
+    "changelog-generator": {
+      "name": "default",
+      "options": {
+        "emojis": "true"
+      }
+    },
+    "hooks": {
+      "names": ["goreleaser"]
+    }
+  }
+} 
