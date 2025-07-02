@@ -7,6 +7,8 @@ import (
 	"github.com/leobishop234/deepcover/src/cover"
 )
 
+const coverageFormat = "%s\t\t%s\t\t%.1f%%\n"
+
 func SaveFile(path string, coverage []cover.Coverage) error {
 	coverageFile, err := os.Create(path)
 	if err != nil {
@@ -15,11 +17,15 @@ func SaveFile(path string, coverage []cover.Coverage) error {
 	defer coverageFile.Close()
 
 	for _, funcCoverage := range coverage {
-		_, err := coverageFile.WriteString(fmt.Sprintf("%s\t\t%s\t\t%.1f%%\n", funcCoverage.Path, funcCoverage.Name, funcCoverage.Coverage))
+		_, err := coverageFile.WriteString(coverageString(funcCoverage))
 		if err != nil {
 			return fmt.Errorf("failed to write coverage to file: %v", err)
 		}
 	}
 
 	return nil
+}
+
+func coverageString(coverage cover.Coverage) string {
+	return fmt.Sprintf(coverageFormat, coverage.Path, coverage.Name, coverage.Coverage)
 }
