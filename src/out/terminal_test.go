@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/leobishop234/deepcover/src/cover"
+	"github.com/stretchr/testify/assert"
 )
 
 var terminalTestCoverage = []cover.Coverage{
@@ -32,39 +33,18 @@ func TestOutputTerminal(t *testing.T) {
 func TestFormatTerminal(t *testing.T) {
 	result := formatTerminal(terminalTestCoverage)
 
-	if !strings.Contains(result, "PATH") {
-		t.Error("Output should contain 'PATH' header")
-	}
-	if !strings.Contains(result, "FUNCTION") {
-		t.Error("Output should contain 'FUNCTION' header")
-	}
-	if !strings.Contains(result, "COVERAGE") {
-		t.Error("Output should contain 'COVERAGE' header")
-	}
+	assert.Contains(t, result, "PATH")
+	assert.Contains(t, result, "FUNCTION")
+	assert.Contains(t, result, "COVERAGE")
 
-	if !strings.Contains(result, "test_data.Top") {
-		t.Error("Output should contain 'test_data.Top'")
-	}
-	if !strings.Contains(result, "test_data.Bottom") {
-		t.Error("Output should contain 'test_data.Bottom'")
-	}
-	if !strings.Contains(result, "test_data.Alternative") {
-		t.Error("Output should contain 'test_data.Alternative'")
-	}
+	assert.Contains(t, result, "test_data.Top")
+	assert.Contains(t, result, "test_data.Bottom")
+	assert.Contains(t, result, "test_data.Alternative")
 
-	if !strings.Contains(result, "100.0%") {
-		t.Error("Output should contain '100.0%'")
-	}
-	if !strings.Contains(result, "50.0%") {
-		t.Error("Output should contain '50.0%'")
-	}
-	if !strings.Contains(result, "0.0%") {
-		t.Error("Output should contain '0.0%'")
-	}
+	assert.Contains(t, result, "100.0%")
+	assert.Contains(t, result, "50.0%")
+	assert.Contains(t, result, "0.0%")
 
 	lines := strings.Split(strings.TrimSpace(result), "\n")
-	expectedLines := 5
-	if len(lines) != expectedLines {
-		t.Errorf("Expected %d lines, got %d", expectedLines, len(lines))
-	}
+	assert.Equal(t, 5, len(lines))
 }
