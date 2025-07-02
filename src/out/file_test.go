@@ -2,47 +2,50 @@ package out
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/leobishop234/deepcover/src/cover"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSaveFile(t *testing.T) {
-	coverage := []cover.Coverage{
-		{
-			Path:     "test_data/example.go",
-			Name:     "test_data.Top",
-			Coverage: 100,
-		},
-		{
-			Path:     "test_data/example.go",
-			Name:     "test_data.Bottom",
-			Coverage: 50,
-		},
-		{
-			Path:     "test_data/example.go",
-			Name:     "test_data.Alternative",
-			Coverage: 0,
-		},
-	}
+var fileTestCoverage = []cover.Coverage{
+	{
+		Path:     "test_data/example.go",
+		Name:     "test_data.Top",
+		Coverage: 100,
+	},
+	{
+		Path:     "test_data/example.go",
+		Name:     "test_data.Bottom",
+		Coverage: 50,
+	},
+	{
+		Path:     "test_data/example.go",
+		Name:     "test_data.Alternative",
+		Coverage: 0,
+	},
+}
 
+func TestOutputFile(t *testing.T) {
 	temp, err := os.CreateTemp(t.TempDir(), "*.coverage")
 	require.NoError(t, err)
 	defer temp.Close()
 
-	require.NoError(t, SaveFile(temp.Name(), coverage))
+	require.NoError(t, OutputFile(temp.Name(), fileTestCoverage))
 
 	gotBytes, err := os.ReadFile(temp.Name())
 	require.NoError(t, err)
-	require.Equal(t, coverageArrayToString(coverage), string(gotBytes))
+	assert.Equal(t, formatFile(fileTestCoverage), string(gotBytes))
 }
 
-func coverageArrayToString(coverage []cover.Coverage) string {
-	lines := make([]string, len(coverage))
-	for i, c := range coverage {
-		lines[i] = coverageString(c)
-	}
-	return strings.Join(lines, "")
+func TestFormatFile(t *testing.T) {
+	expected := `test_data.Top		test_data/example.go		100.0%
+test_data.Bottom		test_data/example.go		50.0%
+test_data.Alternative		test_data/example.go		0.0%
+`
+
+	got := formatFile(fileTestCoverage)
+
+	assert.Equal(t, expected, got)
 }
