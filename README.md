@@ -59,11 +59,11 @@ Example output:
 ```
 PATH                                          FUNCTION       COVERAGE
 ---------------------------------------------------------------------
-deepcover/testexample/example.go:5:           Top            100.0%  
-deepcover/testexample/example.go:9:           Bottom         100.0%  
-deepcover/testexample/interface.go:9:         newInterface   100.0%  
-deepcover/testexample/interface.go:15:        Method         66.7%   
-deepcover/testexample/subpkg/subtest.go:12:   SubPkg         75.0%   
+deepcover/test_data/example.go:5:           Top            100.0%  
+deepcover/test_data/example.go:9:           Bottom         100.0%  
+deepcover/test_data/interface.go:9:         newInterface   100.0%  
+deepcover/test_data/interface.go:15:        Method         66.7%   
+deepcover/test_data/subpkg/subtest.go:12:   SubPkg         75.0%   
 ```
 ## Requirements
 

@@ -1,4 +1,4 @@
-package testexample
+package test_data
 
 import "testing"
 

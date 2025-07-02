@@ -1,6 +1,6 @@
-package testexample
+package test_data
 
-import "github.com/leobishop234/deepcover/testexample/subpkg"
+import "github.com/leobishop234/deepcover/test_data/subpkg"
 
 func Top() {
 	Bottom()
