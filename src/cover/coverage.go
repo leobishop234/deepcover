@@ -17,9 +17,16 @@ type Coverage struct {
 
 func getCoverage(path, target string, dependenciesByTarget map[string][]dependency) ([]Coverage, error) {
 	dependencies := collapseDependencies(dependenciesByTarget)
-	coverage, err := runTests(path, target, dependencies)
+
+	coverageFile, err := runTests(path, target, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
+	}
+	defer os.Remove(coverageFile.Name())
+
+	coverage, err := calculateCoverageFromFile(coverageFile, dependencies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate coverage: %v", err)
 	}
 
 	return coverage, nil
@@ -41,7 +48,7 @@ func collapseDependencies(dependencies map[string][]dependency) []dependency {
 	return collapsed
 }
 
-func runTests(path, target string, dependencies []dependency) ([]Coverage, error) {
+func runTests(path, target string, dependencies []dependency) (*os.File, error) {
 	packages := make([]string, len(dependencies))
 	for i, dependency := range dependencies {
 		packages[i] = dependency.PkgPath
@@ -51,7 +58,6 @@ func runTests(path, target string, dependencies []dependency) ([]Coverage, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(coverageFile.Name())
 
 	cmd := exec.Command(
 		"go", "test",
@@ -62,9 +68,14 @@ func runTests(path, target string, dependencies []dependency) ([]Coverage, error
 		path,
 	)
 	if err := cmd.Run(); err != nil {
+		os.Remove(coverageFile.Name())
 		return nil, fmt.Errorf("failed to run tests: %v", err)
 	}
 
+	return coverageFile, nil
+}
+
+func calculateCoverageFromFile(coverageFile *os.File, dependencies []dependency) ([]Coverage, error) {
 	output, err := exec.Command(
 		"go", "tool", "cover",
 		"-func="+coverageFile.Name(),
