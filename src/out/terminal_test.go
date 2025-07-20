@@ -10,18 +10,18 @@ import (
 
 var terminalTestCoverage = []cover.Coverage{
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Top",
+		Path:     "example/path/file1.go",
+		Name:     "package.Function1",
 		Coverage: 100,
 	},
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Bottom",
+		Path:     "example/path/file2.go",
+		Name:     "package.Function2",
 		Coverage: 50,
 	},
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Alternative",
+		Path:     "example/path/file3.go",
+		Name:     "package.Function3",
 		Coverage: 0,
 	},
 }
@@ -37,9 +37,9 @@ func TestFormatTerminal(t *testing.T) {
 	assert.Contains(t, result, "FUNCTION")
 	assert.Contains(t, result, "COVERAGE")
 
-	assert.Contains(t, result, "test_data.Top")
-	assert.Contains(t, result, "test_data.Bottom")
-	assert.Contains(t, result, "test_data.Alternative")
+	assert.Contains(t, result, "package.Function1")
+	assert.Contains(t, result, "package.Function2")
+	assert.Contains(t, result, "package.Function3")
 
 	assert.Contains(t, result, "100.0%")
 	assert.Contains(t, result, "50.0%")

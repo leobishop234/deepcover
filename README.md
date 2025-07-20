@@ -57,14 +57,17 @@ Deepcover outputs a table showing:
 
 Example output:
 ```
-PATH                                          FUNCTION       COVERAGE
----------------------------------------------------------------------
-deepcover/test_data/example.go:5:           Top            100.0%  
-deepcover/test_data/example.go:9:           Bottom         100.0%  
-deepcover/test_data/interface.go:9:         newInterface   100.0%  
-deepcover/test_data/interface.go:15:        Method         66.7%   
-deepcover/test_data/subpkg/subtest.go:12:   SubPkg         75.0%   
+$ deepcover -run "Test.*" ./src/cover/test_data
+PATH                                                                          FUNCTION       COVERAGE
+-----------------------------------------------------------------------------------------------------
+github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:           Top            100.0%
+github.com/leobishop234/deepcover/src/cover/test_data/example.go:9:           Bottom         100.0%
+github.com/leobishop234/deepcover/src/cover/test_data/example.go:16:          Alternative    100.0%
+github.com/leobishop234/deepcover/src/cover/test_data/interface.go:9:         newInterface   100.0%
+github.com/leobishop234/deepcover/src/cover/test_data/interface.go:15:        Method         66.7%
+github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   SubPkg         100.0%  
 ```
+
 ## Requirements
 
 - Go >= 1.22

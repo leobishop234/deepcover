@@ -11,18 +11,18 @@ import (
 
 var fileTestCoverage = []cover.Coverage{
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Top",
+		Path:     "example/path/file1.go",
+		Name:     "package.Function1",
 		Coverage: 100,
 	},
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Bottom",
+		Path:     "example/path/file2.go",
+		Name:     "package.Function2",
 		Coverage: 50,
 	},
 	{
-		Path:     "test_data/example.go",
-		Name:     "test_data.Alternative",
+		Path:     "example/path/file3.go",
+		Name:     "package.Function3",
 		Coverage: 0,
 	},
 }
@@ -40,9 +40,9 @@ func TestOutputFile(t *testing.T) {
 }
 
 func TestFormatFile(t *testing.T) {
-	expected := `test_data.Top		test_data/example.go		100.0%
-test_data.Bottom		test_data/example.go		50.0%
-test_data.Alternative		test_data/example.go		0.0%
+	expected := `package.Function1		example/path/file1.go		100.0%
+package.Function2		example/path/file2.go		50.0%
+package.Function3		example/path/file3.go		0.0%
 `
 
 	got := formatFile(fileTestCoverage)
