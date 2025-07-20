@@ -97,8 +97,6 @@ func TestCollapseDependencies(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := collapseDependencies(tt.dependencies)
-
-			// Sort both slices for comparison since order doesn't matter
 			assert.ElementsMatch(t, tt.expectedResult, result)
 		})
 	}
@@ -106,20 +104,20 @@ func TestCollapseDependencies(t *testing.T) {
 
 func TestRunTests(t *testing.T) {
 	tests := []struct {
-		name                string
-		path                string
-		target              string
-		dependencies        []dependency
-		expectError         bool
-		expectErrorContains string
+		name             string
+		path             string
+		target           string
+		dependencies     []dependency
+		expectedCoverage []Coverage
+		expectError      bool
 	}{
 		{
-			name:                "empty dependencies",
-			path:                getTestDataPath(),
-			target:              "TestTop",
-			dependencies:        []dependency{},
-			expectError:         false,
-			expectErrorContains: "",
+			name:             "empty dependencies",
+			path:             getTestDataPath(),
+			target:           "TestTop",
+			dependencies:     []dependency{},
+			expectedCoverage: []Coverage{},
+			expectError:      false,
 		},
 		{
 			name:   "non-existent path",
@@ -128,8 +126,8 @@ func TestRunTests(t *testing.T) {
 			dependencies: []dependency{
 				{PkgPath: "github.com/example/pkg", FuncName: "Function"},
 			},
-			expectError:         true,
-			expectErrorContains: "failed to run tests",
+			expectedCoverage: []Coverage{},
+			expectError:      true,
 		},
 		{
 			name:   "non-existent target",
@@ -138,8 +136,10 @@ func TestRunTests(t *testing.T) {
 			dependencies: []dependency{
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:", Name: "Top", Coverage: 0.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "successful test with Top function",
@@ -149,8 +149,11 @@ func TestRunTests(t *testing.T) {
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:", Name: "Top", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:9:", Name: "Bottom", Coverage: 100.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "successful test with Bottom function",
@@ -160,8 +163,11 @@ func TestRunTests(t *testing.T) {
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:9:", Name: "Bottom", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:", Name: "SubPkg", Coverage: 75.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "successful test with Alternative function",
@@ -171,8 +177,11 @@ func TestRunTests(t *testing.T) {
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Alternative"},
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:16:", Name: "Alternative", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:", Name: "SubPkg", Coverage: 75.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "test with interface method dependency",
@@ -182,10 +191,15 @@ func TestRunTests(t *testing.T) {
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "newInterface"},
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "(*Struct).Method"},
+				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Method"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:", Name: "Top", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:9:", Name: "Bottom", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/interface.go:9:", Name: "newInterface", Coverage: 100.0},
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/interface.go:15:", Name: "Method", Coverage: 66.7},
+			},
+			expectError: false,
 		},
 		{
 			name:   "test with partial dependencies",
@@ -194,8 +208,10 @@ func TestRunTests(t *testing.T) {
 			dependencies: []dependency{
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:", Name: "Top", Coverage: 100.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "test with non-existent package in dependencies",
@@ -205,8 +221,10 @@ func TestRunTests(t *testing.T) {
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 				{PkgPath: "github.com/non/existent/package", FuncName: "SomeFunction"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/example.go:5:", Name: "Top", Coverage: 100.0},
+			},
+			expectError: false,
 		},
 		{
 			name:   "test with subpkg dependency only",
@@ -215,8 +233,10 @@ func TestRunTests(t *testing.T) {
 			dependencies: []dependency{
 				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
 			},
-			expectError:         false,
-			expectErrorContains: "",
+			expectedCoverage: []Coverage{
+				{Path: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:", Name: "SubPkg", Coverage: 75.0},
+			},
+			expectError: false,
 		},
 	}
 
@@ -226,22 +246,11 @@ func TestRunTests(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				if tt.expectErrorContains != "" {
-					assert.Contains(t, err.Error(), tt.expectErrorContains)
-				}
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.NotNil(t, coverage)
-
-			// For successful cases, verify the coverage structure
-			for _, cov := range coverage {
-				assert.NotEmpty(t, cov.Path)
-				assert.NotEmpty(t, cov.Name)
-				assert.GreaterOrEqual(t, cov.Coverage, 0.0)
-				assert.LessOrEqual(t, cov.Coverage, 100.0)
-			}
+			assert.Equal(t, tt.expectedCoverage, coverage)
 		})
 	}
 }
