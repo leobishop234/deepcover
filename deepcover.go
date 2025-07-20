@@ -42,11 +42,11 @@ func run(pkgPath, target, output string) error {
 	}
 
 	if output != "" {
-		if err := out.SaveFile(output, coverage); err != nil {
+		if err := out.OutputFile(output, coverage); err != nil {
 			return fmt.Errorf("failed to save coverage to file: %v", err)
 		}
 	} else {
-		out.PrintCoverage(coverage)
+		out.OutputTerminal(coverage)
 	}
 
 	return nil

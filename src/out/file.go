@@ -3,23 +3,29 @@ package out
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/leobishop234/deepcover/src/cover"
 )
 
-func SaveFile(path string, coverage []cover.Coverage) error {
+const coverageFormat = "%s\t\t%s\t\t%.1f%%\n"
+
+func OutputFile(path string, coverage []cover.Coverage) error {
 	coverageFile, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("failed to create coverage file: %v", err)
 	}
 	defer coverageFile.Close()
 
-	for _, funcCoverage := range coverage {
-		_, err := coverageFile.WriteString(fmt.Sprintf("%s\t\t%s\t\t%.1f%%\n", funcCoverage.Path, funcCoverage.Name, funcCoverage.Coverage))
-		if err != nil {
-			return fmt.Errorf("failed to write coverage to file: %v", err)
-		}
+	coverageFile.WriteString(formatFile(coverage))
+	return nil
+}
+
+func formatFile(coverage []cover.Coverage) string {
+	var str strings.Builder
+	for _, cover := range coverage {
+		str.WriteString(fmt.Sprintf(coverageFormat, cover.Name, cover.Path, cover.Coverage))
 	}
 
-	return nil
+	return str.String()
 }

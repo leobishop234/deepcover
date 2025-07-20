@@ -28,6 +28,10 @@ func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, 
 }
 
 func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
+	if cg == nil {
+		return nil, fmt.Errorf("call graph is nil")
+	}
+
 	rootModule, hasRootModule, err := getNodeModule(cg.Root)
 	if err != nil {
 		return nil, err
@@ -86,7 +90,7 @@ type knownPackage struct {
 var knownPackages = map[string]knownPackage{}
 
 func getNodeModule(node *callgraph.Node) (string, bool, error) {
-	if node.Func == nil || node.Func.Pkg == nil || node.Func.Pkg.Pkg == nil {
+	if node == nil || node.Func == nil || node.Func.Pkg == nil || node.Func.Pkg.Pkg == nil {
 		return "", false, nil
 	}
 

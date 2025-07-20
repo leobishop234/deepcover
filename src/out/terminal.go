@@ -7,7 +7,11 @@ import (
 	"github.com/leobishop234/deepcover/src/cover"
 )
 
-func PrintCoverage(coverage []cover.Coverage) {
+func OutputTerminal(coverage []cover.Coverage) {
+	fmt.Print(formatTerminal(coverage))
+}
+
+func formatTerminal(coverage []cover.Coverage) string {
 	var pathLen, nameLen, coverageLen int
 	for _, funcCoverage := range coverage {
 		if len(funcCoverage.Path) > pathLen {
@@ -24,19 +28,26 @@ func PrintCoverage(coverage []cover.Coverage) {
 	nameLen += 2
 	coverageLen += 2
 
+	var result strings.Builder
+
 	title := fmt.Sprintf("%-*s %-*s %-*s", pathLen, "PATH", nameLen, "FUNCTION", coverageLen, "COVERAGE")
-	fmt.Println(title)
-	fmt.Println(strings.Repeat("-", len(title)))
+	result.WriteString(title)
+	result.WriteString("\n")
+	result.WriteString(strings.Repeat("-", len(title)))
+	result.WriteString("\n")
 
 	for _, funcCoverage := range coverage {
 		coverageStr := fmt.Sprintf("%.1f%%", funcCoverage.Coverage)
-		fmt.Printf("%-*s %-*s %-*s\n",
+		line := fmt.Sprintf("%-*s %-*s %-*s\n",
 			pathLen,
 			funcCoverage.Path,
 			nameLen,
 			funcCoverage.Name,
 			coverageLen,
 			coverageStr)
+		result.WriteString(line)
 	}
-	fmt.Println()
+	result.WriteString("\n")
+
+	return result.String()
 }
