@@ -14,11 +14,11 @@ type dependency struct {
 	FuncName   string
 }
 
-func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, error) {
-	dependencies := make(map[string][]dependency, len(cgs))
+func getDependencies(cgs callgraphAndTargets) (map[string][]dependency, error) {
+	dependencies := make(map[string][]dependency, len(cgs.targets))
 	var err error
-	for target, cg := range cgs {
-		dependencies[target], err = extractDependencies(cg)
+	for _, target := range cgs.targets {
+		dependencies[target.Func.Name()], err = extractDependencies(cgs.callgraph, target)
 		if err != nil {
 			return nil, err
 		}
@@ -27,12 +27,16 @@ func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, 
 	return dependencies, nil
 }
 
-func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
+func extractDependencies(cg *callgraph.Graph, start *callgraph.Node) ([]dependency, error) {
 	if cg == nil {
 		return nil, fmt.Errorf("call graph is nil")
 	}
 
-	rootModule, hasRootModule, err := getNodeModule(cg.Root)
+	if start == nil {
+		return nil, fmt.Errorf("start node is nil")
+	}
+
+	rootModule, hasRootModule, err := getNodeModule(start)
 	if err != nil {
 		return nil, err
 	} else if !hasRootModule {
@@ -42,7 +46,7 @@ func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
 	dependencies := []dependency{}
 
 	visited := map[*callgraph.Node]bool{}
-	queue := []*callgraph.Node{cg.Root}
+	queue := []*callgraph.Node{start}
 
 	for len(queue) > 0 {
 		current := queue[0]

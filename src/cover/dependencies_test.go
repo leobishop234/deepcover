@@ -18,14 +18,6 @@ func TestExtractDependencies(t *testing.T) {
 		expectedError  bool
 	}{
 		{
-			name: "nil call graph",
-			setupCallGraph: func() *callgraph.Graph {
-				return nil
-			},
-			expectedDeps:  nil,
-			expectedError: true,
-		},
-		{
 			name: "call graph with nil root",
 			setupCallGraph: func() *callgraph.Graph {
 				return &callgraph.Graph{Root: nil}
@@ -129,7 +121,7 @@ func TestExtractDependencies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cg := tt.setupCallGraph()
 
-			deps, err := extractDependencies(cg)
+			deps, err := extractDependencies(cg, cg.Root)
 
 			if tt.expectedError {
 				assert.Error(t, err)

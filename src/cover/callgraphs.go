@@ -13,26 +13,35 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-func buildCallgraphs(path string, targetRegex *regexp.Regexp) (map[string]*callgraph.Graph, error) {
+type callgraphAndTargets struct {
+	callgraph *callgraph.Graph
+	targets   []*callgraph.Node
+}
+
+func buildCallgraphs(path string, targetRegex *regexp.Regexp) (callgraphAndTargets, error) {
 	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), path)
 	if err != nil {
-		return nil, err
+		return callgraphAndTargets{}, err
 	}
 
 	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targetRegex)
 	if err != nil {
-		return nil, err
+		return callgraphAndTargets{}, err
 	}
 
-	cgs := make(map[string]*callgraph.Graph, len(targetFuncs))
+	results := callgraphAndTargets{
+		callgraph: cha.CallGraph(ssaProg),
+	}
+
 	for _, target := range targetFuncs {
-		cgs[target.Name()], err = buildCallgraph(cha.CallGraph, ssaProg, target)
-		if err != nil {
-			return nil, err
+		targetNode, ok := results.callgraph.Nodes[target]
+		if !ok {
+			return callgraphAndTargets{}, fmt.Errorf("failed to find callgraph node for function %s", target.Name())
 		}
+		results.targets = append(results.targets, targetNode)
 	}
 
-	return cgs, nil
+	return results, nil
 }
 
 func chaConfig() *packages.Config {
@@ -81,16 +90,4 @@ func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targetRegex *regexp.Regexp) 
 	}
 
 	return targetFuncs, nil
-}
-
-func buildCallgraph(builder func(prog *ssa.Program) *callgraph.Graph, ssaProg *ssa.Program, target *ssa.Function) (*callgraph.Graph, error) {
-	cg := builder(ssaProg)
-	cg.DeleteSyntheticNodes()
-
-	var ok bool
-	if cg.Root, ok = cg.Nodes[target]; !ok {
-		return nil, fmt.Errorf("failed to find callgraph node for function %s", target.Name())
-	}
-
-	return cg, nil
 }
