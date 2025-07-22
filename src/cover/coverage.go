@@ -9,13 +9,7 @@ import (
 	"strings"
 )
 
-type Coverage struct {
-	Path     string
-	Name     string
-	Coverage float64
-}
-
-func getCoverage(path, target string, dependenciesByTarget map[string][]dependency) ([]Coverage, error) {
+func getCoverage(path, target string, dependenciesByTarget map[functionID][]dependency) ([]Coverage, error) {
 	dependencies := collapseDependencies(dependenciesByTarget)
 
 	coverageFile, err := runTests(path, target, dependencies)
@@ -32,7 +26,7 @@ func getCoverage(path, target string, dependenciesByTarget map[string][]dependen
 	return coverage, nil
 }
 
-func collapseDependencies(dependencies map[string][]dependency) []dependency {
+func collapseDependencies(dependencies map[functionID][]dependency) []dependency {
 	depMap := make(map[dependency]bool)
 	for _, deps := range dependencies {
 		for _, dep := range deps {

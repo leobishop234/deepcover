@@ -75,7 +75,7 @@ github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   Su
 
 ## Limitations
 
-- **Init functions are not supported**: Functions named `init` (including compiler-generated variants like `init#1`, `init#2`, etc.) are filtered out and will not appear in coverage analysis. This is due to the complexity of matching multiple init functions between different code representations.
+- **inbuilt functions are not supported**: Functions named `init` (including compiler-generated variants like `init#1`, `init#2`, etc.) or `main` are filtered out and will not appear in coverage analysis. The is due to the complexity of reconciling them between different data representations.
 
 ## License
 

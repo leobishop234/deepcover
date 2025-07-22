@@ -4,6 +4,12 @@ import (
 	"regexp"
 )
 
+type Coverage struct {
+	Path     string
+	Name     string
+	Coverage float64
+}
+
 func Deepcover(pkgPath, target string) ([]Coverage, error) {
 	targetRegex, err := regexp.Compile(target)
 	if err != nil {

@@ -31,7 +31,7 @@ func TestGetCoverage(t *testing.T) {
 		name                 string
 		path                 string
 		target               string
-		dependenciesByTarget map[string][]dependency
+		dependenciesByTarget map[functionID][]dependency
 		expectError          bool
 		expectedCoverage     int
 	}{
@@ -39,7 +39,7 @@ func TestGetCoverage(t *testing.T) {
 			name:                 "empty dependencies",
 			path:                 getTestDataPath(),
 			target:               "TestTop",
-			dependenciesByTarget: map[string][]dependency{},
+			dependenciesByTarget: map[functionID][]dependency{},
 			expectError:          false,
 			expectedCoverage:     0,
 		},
@@ -47,8 +47,8 @@ func TestGetCoverage(t *testing.T) {
 			name:   "non-existent path",
 			path:   "non_existent_path",
 			target: "TestFunction",
-			dependenciesByTarget: map[string][]dependency{
-				"target1": {
+			dependenciesByTarget: map[functionID][]dependency{
+				{pkgPath: "github.com/example/pkg", funcName: "target1"}: {
 					{PkgPath: "github.com/example/pkg", FuncName: "Function"},
 				},
 			},
@@ -59,8 +59,8 @@ func TestGetCoverage(t *testing.T) {
 			name:   "successful coverage with single target",
 			path:   getTestDataPath(),
 			target: "TestTop",
-			dependenciesByTarget: map[string][]dependency{
-				"target1": {
+			dependenciesByTarget: map[functionID][]dependency{
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 				},
 			},
@@ -71,12 +71,12 @@ func TestGetCoverage(t *testing.T) {
 			name:   "successful coverage with multiple targets and overlapping dependencies",
 			path:   getTestDataPath(),
 			target: "TestTop",
-			dependenciesByTarget: map[string][]dependency{
-				"target1": {
+			dependenciesByTarget: map[functionID][]dependency{
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 				},
-				"target2": {
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target2"}: {
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 				},
 			},
@@ -87,8 +87,8 @@ func TestGetCoverage(t *testing.T) {
 			name:   "test with subpackage dependencies",
 			path:   getTestDataPath(),
 			target: "TestBottom",
-			dependenciesByTarget: map[string][]dependency{
-				"target1": {
+			dependenciesByTarget: map[functionID][]dependency{
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
 					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
 				},
@@ -116,18 +116,18 @@ func TestGetCoverage(t *testing.T) {
 func TestCollapseDependencies(t *testing.T) {
 	tests := []struct {
 		name           string
-		dependencies   map[string][]dependency
+		dependencies   map[functionID][]dependency
 		expectedResult []dependency
 	}{
 		{
 			name:           "empty dependencies",
-			dependencies:   map[string][]dependency{},
+			dependencies:   map[functionID][]dependency{},
 			expectedResult: []dependency{},
 		},
 		{
 			name: "single target with single dependency",
-			dependencies: map[string][]dependency{
-				"target1": {
+			dependencies: map[functionID][]dependency{
+				{pkgPath: "pkg1", funcName: "target1"}: {
 					{PkgPath: "pkg1", FuncName: "func1"},
 				},
 			},
@@ -137,11 +137,11 @@ func TestCollapseDependencies(t *testing.T) {
 		},
 		{
 			name: "multiple targets with unique dependencies",
-			dependencies: map[string][]dependency{
-				"target1": {
+			dependencies: map[functionID][]dependency{
+				{pkgPath: "pkg1", funcName: "target1"}: {
 					{PkgPath: "pkg1", FuncName: "func1"},
 				},
-				"target2": {
+				{pkgPath: "pkg2", funcName: "target2"}: {
 					{PkgPath: "pkg2", FuncName: "func2"},
 				},
 			},
@@ -152,12 +152,12 @@ func TestCollapseDependencies(t *testing.T) {
 		},
 		{
 			name: "multiple targets with overlapping dependencies",
-			dependencies: map[string][]dependency{
-				"target1": {
+			dependencies: map[functionID][]dependency{
+				{pkgPath: "pkg1", funcName: "target1"}: {
 					{PkgPath: "pkg1", FuncName: "func1"},
 					{PkgPath: "pkg2", FuncName: "func2"},
 				},
-				"target2": {
+				{pkgPath: "pkg2", funcName: "target2"}: {
 					{PkgPath: "pkg2", FuncName: "func2"},
 					{PkgPath: "pkg3", FuncName: "func3"},
 				},
@@ -170,8 +170,8 @@ func TestCollapseDependencies(t *testing.T) {
 		},
 		{
 			name: "duplicate dependencies within same target",
-			dependencies: map[string][]dependency{
-				"target1": {
+			dependencies: map[functionID][]dependency{
+				{pkgPath: "pkg1", funcName: "target1"}: {
 					{PkgPath: "pkg1", FuncName: "func1"},
 					{PkgPath: "pkg1", FuncName: "func1"},
 				},

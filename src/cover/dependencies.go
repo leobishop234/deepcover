@@ -7,18 +7,11 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-type dependency struct {
-	ModuleName string
-	PkgName    string
-	PkgPath    string
-	FuncName   string
-}
-
-func getDependencies(cgs callgraphAndTargets) (map[string][]dependency, error) {
-	dependencies := make(map[string][]dependency, len(cgs.targets))
+func getDependencies(cgs callgraphAndTargets) (map[functionID][]dependency, error) {
+	dependencies := make(map[functionID][]dependency, len(cgs.targetNodes))
 	var err error
-	for _, target := range cgs.targets {
-		dependencies[target.node.Func.Name()], err = extractDependencies(cgs.callgraph, target.node)
+	for targetID, targetNode := range cgs.targetNodes {
+		dependencies[targetID], err = extractDependencies(cgs.callgraph, targetNode)
 		if err != nil {
 			return nil, err
 		}
