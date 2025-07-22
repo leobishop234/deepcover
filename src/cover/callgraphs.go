@@ -3,6 +3,7 @@ package cover
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/token"
 	"regexp"
 
@@ -15,30 +16,57 @@ import (
 
 type callgraphAndTargets struct {
 	callgraph *callgraph.Graph
-	targets   []*callgraph.Node
+	targets   map[string]targetObj
+}
+
+type targetObj struct {
+	ssaFunc *ssa.Function
+	node    *callgraph.Node
+	ast     *ast.FuncDecl
 }
 
 func buildCallgraphs(path string, targetRegex *regexp.Regexp) (callgraphAndTargets, error) {
-	ssaProg, ssaPkgs, err := buildSSA(chaConfig(), path)
+	pkgs, err := loadPackages(chaConfig(), path)
 	if err != nil {
 		return callgraphAndTargets{}, err
 	}
 
-	targetFuncs, err := findTargetSSAFunctions(ssaPkgs, targetRegex)
+	ssaProg, ssaPkgs, err := buildObjects(pkgs)
+	if err != nil {
+		return callgraphAndTargets{}, err
+	}
+
+	targetSSAs, err := findTargetFunctions(ssaPkgs, targetRegex)
+	if err != nil {
+		return callgraphAndTargets{}, err
+	}
+
+	targetASTs, err := findTargetASTFunctions(pkgs, targetRegex)
 	if err != nil {
 		return callgraphAndTargets{}, err
 	}
 
 	results := callgraphAndTargets{
 		callgraph: cha.CallGraph(ssaProg),
+		targets:   make(map[string]targetObj, len(targetSSAs)),
 	}
 
-	for _, target := range targetFuncs {
-		targetNode, ok := results.callgraph.Nodes[target]
+	for ssaName, targetSSA := range targetSSAs {
+		targetNode, ok := results.callgraph.Nodes[targetSSA]
 		if !ok {
-			return callgraphAndTargets{}, fmt.Errorf("failed to find callgraph node for function %s", target.Name())
+			return callgraphAndTargets{}, fmt.Errorf("failed to find callgraph node for function %s", targetSSA.Name())
 		}
-		results.targets = append(results.targets, targetNode)
+
+		targetAST, ok := targetASTs[ssaName]
+		if !ok {
+			return callgraphAndTargets{}, fmt.Errorf("failed to find AST function for function %s", ssaName)
+		}
+
+		results.targets[ssaName] = targetObj{
+			node:    targetNode,
+			ssaFunc: targetSSA,
+			ast:     targetAST,
+		}
 	}
 
 	return results, nil
@@ -52,13 +80,14 @@ func chaConfig() *packages.Config {
 	}
 }
 
-func buildSSA(conf *packages.Config, path string) (*ssa.Program, []*ssa.Package, error) {
+func loadPackages(conf *packages.Config, path string) ([]*packages.Package, error) {
 	pkgs, err := packages.Load(conf, path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load packages: %v", err)
+		return nil, fmt.Errorf("failed to load packages: %v", err)
 	}
+
 	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("no packages found")
+		return nil, fmt.Errorf("no packages found")
 	}
 
 	errs := []error{}
@@ -68,26 +97,60 @@ func buildSSA(conf *packages.Config, path string) (*ssa.Program, []*ssa.Package,
 		}
 	}
 	if len(errs) > 0 {
-		return nil, nil, errors.Join(errs...)
+		return nil, errors.Join(errs...)
 	}
 
+	return pkgs, nil
+}
+
+func buildObjects(pkgs []*packages.Package) (*ssa.Program, []*ssa.Package, error) {
 	ssaProg, ssaPkgs := ssautil.AllPackages(pkgs, 0)
 	ssaProg.Build()
 
 	return ssaProg, ssaPkgs, nil
 }
 
-func findTargetSSAFunctions(ssaPkgs []*ssa.Package, targetRegex *regexp.Regexp) ([]*ssa.Function, error) {
-	var targetFuncs []*ssa.Function
-	for _, ssaPkg := range ssaPkgs {
+func isInitFunction(name string) bool {
+	return name == "init" || (len(name) > 4 && name[:4] == "init" && name[4] == '#')
+}
+
+func findTargetFunctions(pkgs []*ssa.Package, targetRegex *regexp.Regexp) (map[string]*ssa.Function, error) {
+	targetFuncs := make(map[string]*ssa.Function)
+	for _, ssaPkg := range pkgs {
 		for _, member := range ssaPkg.Members {
 			if fn, ok := member.(*ssa.Function); ok {
+				// Skip init functions - they are not supported
+				if isInitFunction(fn.Name()) {
+					continue
+				}
 				if targetRegex.MatchString(fn.Name()) {
-					targetFuncs = append(targetFuncs, fn)
+					targetFuncs[fn.Name()] = fn
 				}
 			}
 		}
 	}
 
 	return targetFuncs, nil
+}
+
+func findTargetASTFunctions(pkgs []*packages.Package, targetRegex *regexp.Regexp) (map[string]*ast.FuncDecl, error) {
+	astFuncs := make(map[string]*ast.FuncDecl)
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if fn, ok := n.(*ast.FuncDecl); ok {
+					// Skip init functions - they are not supported
+					if isInitFunction(fn.Name.Name) {
+						return true
+					}
+					if targetRegex.MatchString(fn.Name.Name) {
+						astFuncs[fn.Name.Name] = fn
+					}
+				}
+				return true
+			})
+		}
+	}
+
+	return astFuncs, nil
 }

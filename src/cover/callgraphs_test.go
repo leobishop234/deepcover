@@ -56,7 +56,7 @@ func TestBuildCallgraphs(t *testing.T) {
 			name:        "match all functions with wildcard",
 			path:        "github.com/leobishop234/deepcover/src/cover/test_data",
 			regex:       ".*",
-			expectFuncs: []string{"Top", "Bottom", "Alternative", "newInterface", "TestTop", "TestBottom", "TestAlternative", "init", "init#1", "main"},
+			expectFuncs: []string{"Top", "Bottom", "Alternative", "newInterface", "TestTop", "TestBottom", "TestAlternative", "main"},
 			expectError: false,
 		},
 		{
@@ -144,15 +144,35 @@ func TestBuildCallgraphs(t *testing.T) {
 			}
 
 			for _, wantFunc := range tt.expectFuncs {
-				found := false
-				for _, target := range cgs.targets {
-					if target.Func.Name() == wantFunc {
-						found = true
-						break
+				if assert.Contains(t, cgs.targets, wantFunc) {
+					gotTarget := cgs.targets[wantFunc]
+					if assert.NotNil(t, gotTarget.ssaFunc) {
+						assert.Equal(t, wantFunc, gotTarget.ssaFunc.Name())
+					}
+					if assert.NotNil(t, gotTarget.ast) {
+						assert.Equal(t, wantFunc, gotTarget.ast.Name.Name)
+					}
+					if assert.NotNil(t, gotTarget.node) {
+						assert.Equal(t, wantFunc, gotTarget.node.Func.Name())
 					}
 				}
-				assert.True(t, found)
 			}
 		})
 	}
+}
+
+func TestInitFunctionsAreFilteredOut(t *testing.T) {
+	// This test verifies that init functions are filtered out as a documented limitation
+	regex, err := regexp.Compile("init")
+	require.NoError(t, err)
+
+	cgs, err := buildCallgraphs("github.com/leobishop234/deepcover/src/cover/test_data", regex)
+	require.NoError(t, err)
+
+	// Verify that no init functions are found
+	for name := range cgs.targets {
+		assert.False(t, isInitFunction(name), "Init function %s should be filtered out but was found", name)
+	}
+
+	t.Logf("Confirmed that %d functions were found, none of which are init functions", len(cgs.targets))
 }

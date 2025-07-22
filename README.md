@@ -73,6 +73,10 @@ github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   Su
 - Go >= 1.22
 - The target package must be part of a Go module
 
+## Limitations
+
+- **Init functions are not supported**: Functions named `init` (including compiler-generated variants like `init#1`, `init#2`, etc.) are filtered out and will not appear in coverage analysis. This is due to the complexity of matching multiple init functions between different code representations.
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

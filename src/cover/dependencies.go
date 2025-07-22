@@ -18,7 +18,7 @@ func getDependencies(cgs callgraphAndTargets) (map[string][]dependency, error) {
 	dependencies := make(map[string][]dependency, len(cgs.targets))
 	var err error
 	for _, target := range cgs.targets {
-		dependencies[target.Func.Name()], err = extractDependencies(cgs.callgraph, target)
+		dependencies[target.node.Func.Name()], err = extractDependencies(cgs.callgraph, target.node)
 		if err != nil {
 			return nil, err
 		}
