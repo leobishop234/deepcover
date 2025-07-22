@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func getDependencies(cgs callgraphAndTargets) (map[functionID][]dependency, error) {
+func getDependencies(cgs callgraphDataset) (map[functionID][]dependency, error) {
 	dependencies := make(map[functionID][]dependency, len(cgs.targetNodes))
 	var err error
 	for targetID, targetNode := range cgs.targetNodes {

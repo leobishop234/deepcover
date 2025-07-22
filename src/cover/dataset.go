@@ -14,20 +14,20 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-func buildCallgraphs(path string, targetRegex *regexp.Regexp) (callgraphAndTargets, error) {
+func buildDataset(path string, targetRegex *regexp.Regexp) (callgraphDataset, error) {
 	pkgs, err := loadPackages(chaConfig(), path)
 	if err != nil {
-		return callgraphAndTargets{}, err
+		return callgraphDataset{}, err
 	}
 
-	ssaProg, ssaPkgs, err := buildObjects(pkgs)
+	ssaProg, ssaPkgs, err := buildSSAObjects(pkgs)
 	if err != nil {
-		return callgraphAndTargets{}, err
+		return callgraphDataset{}, err
 	}
 
 	targetSSAs := findTargetSSAFunctions(ssaPkgs, targetRegex)
 
-	results := callgraphAndTargets{
+	results := callgraphDataset{
 		callgraph:   cha.CallGraph(ssaProg),
 		asts:        buildASTMap(pkgs),
 		targetNodes: make(map[functionID]*callgraph.Node, len(targetSSAs)),
@@ -36,12 +36,20 @@ func buildCallgraphs(path string, targetRegex *regexp.Regexp) (callgraphAndTarge
 	for functionID, targetSSA := range targetSSAs {
 		targetNode, ok := results.callgraph.Nodes[targetSSA]
 		if !ok {
-			return callgraphAndTargets{}, fmt.Errorf("failed to find callgraph node for function %s", targetSSA.Name())
+			return callgraphDataset{}, fmt.Errorf("failed to find callgraph node for function %s", targetSSA.Name())
 		}
 		results.targetNodes[functionID] = targetNode
 	}
 
 	return results, nil
+}
+
+func chaConfig() *packages.Config {
+	return &packages.Config{
+		Mode:  packages.LoadSyntax | packages.NeedDeps | packages.NeedModule,
+		Tests: true,
+		Fset:  token.NewFileSet(),
+	}
 }
 
 func loadPackages(conf *packages.Config, path string) ([]*packages.Package, error) {
@@ -67,15 +75,7 @@ func loadPackages(conf *packages.Config, path string) ([]*packages.Package, erro
 	return pkgs, nil
 }
 
-func chaConfig() *packages.Config {
-	return &packages.Config{
-		Mode:  packages.LoadSyntax | packages.NeedDeps | packages.NeedModule,
-		Tests: true,
-		Fset:  token.NewFileSet(),
-	}
-}
-
-func buildObjects(pkgs []*packages.Package) (*ssa.Program, []*ssa.Package, error) {
+func buildSSAObjects(pkgs []*packages.Package) (*ssa.Program, []*ssa.Package, error) {
 	ssaProg, ssaPkgs := ssautil.AllPackages(pkgs, 0)
 	ssaProg.Build()
 
