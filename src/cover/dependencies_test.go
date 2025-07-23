@@ -14,14 +14,14 @@ import (
 func TestExtractDependencies(t *testing.T) {
 	tests := []struct {
 		name           string
-		setupCallGraph func() callgraphDataset
+		setupCallGraph func() analysis
 		expectedDeps   []dependency
 		expectedError  bool
 	}{
 		{
 			name: "call graph with nil root",
-			setupCallGraph: func() callgraphDataset {
-				return callgraphDataset{
+			setupCallGraph: func() analysis {
+				return analysis{
 					callgraph:   &callgraph.Graph{Root: nil},
 					targetNodes: make(map[functionID]*callgraph.Node),
 					asts:        make(map[functionID]*ast.FuncDecl),
@@ -32,7 +32,7 @@ func TestExtractDependencies(t *testing.T) {
 		},
 		{
 			name: "root function not in a module",
-			setupCallGraph: func() callgraphDataset {
+			setupCallGraph: func() analysis {
 				knownPackages = map[string]knownPackage{}
 
 				pkg := types.NewPackage("non/existent/package", "nonexistent")
@@ -42,7 +42,7 @@ func TestExtractDependencies(t *testing.T) {
 				rootFunc.Pkg = ssaPkg
 
 				root := &callgraph.Node{Func: rootFunc}
-				return callgraphDataset{
+				return analysis{
 					callgraph:   &callgraph.Graph{Root: root},
 					targetNodes: make(map[functionID]*callgraph.Node),
 					asts:        make(map[functionID]*ast.FuncDecl),
@@ -53,7 +53,7 @@ func TestExtractDependencies(t *testing.T) {
 		},
 		{
 			name: "single function in module",
-			setupCallGraph: func() callgraphDataset {
+			setupCallGraph: func() analysis {
 				// Pre-populate cache to simulate a package that is in a module
 				knownPackages = map[string]knownPackage{
 					"github.com/leobishop234/deepcover/src/cover": {
@@ -81,7 +81,7 @@ func TestExtractDependencies(t *testing.T) {
 					funcName: "", // Name() will return empty string for empty ssa.Function
 				}
 
-				return callgraphDataset{
+				return analysis{
 					callgraph: &callgraph.Graph{Root: root},
 					targetNodes: map[functionID]*callgraph.Node{
 						funcID: root,
@@ -104,7 +104,7 @@ func TestExtractDependencies(t *testing.T) {
 		},
 		{
 			name: "multiple functions in same module",
-			setupCallGraph: func() callgraphDataset {
+			setupCallGraph: func() analysis {
 				knownPackages = map[string]knownPackage{
 					"github.com/leobishop234/deepcover/src/cover": {
 						hasModule: true,
@@ -145,7 +145,7 @@ func TestExtractDependencies(t *testing.T) {
 					funcName: "",
 				}
 
-				return callgraphDataset{
+				return analysis{
 					callgraph: &callgraph.Graph{Root: root},
 					targetNodes: map[functionID]*callgraph.Node{
 						rootFuncID:   root,

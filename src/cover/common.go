@@ -11,7 +11,7 @@ type functionID struct {
 	funcName string
 }
 
-type callgraphDataset struct {
+type analysis struct {
 	callgraph   *callgraph.Graph
 	targetNodes map[functionID]*callgraph.Node
 	asts        map[functionID]*ast.FuncDecl

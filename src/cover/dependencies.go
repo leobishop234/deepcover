@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func getDependencies(cgs callgraphDataset) (map[functionID][]dependency, error) {
+func getDependencies(cgs analysis) (map[functionID][]dependency, error) {
 	dependencies := make(map[functionID][]dependency, len(cgs.targetNodes))
 	var err error
 	for targetID, targetNode := range cgs.targetNodes {
@@ -20,7 +20,7 @@ func getDependencies(cgs callgraphDataset) (map[functionID][]dependency, error) 
 	return dependencies, nil
 }
 
-func extractDependencies(cg callgraphDataset, start *callgraph.Node) ([]dependency, error) {
+func extractDependencies(cg analysis, start *callgraph.Node) ([]dependency, error) {
 	if start == nil {
 		return nil, fmt.Errorf("start node is nil")
 	}

@@ -16,7 +16,7 @@ func Deepcover(pkgPath, target string) ([]Coverage, error) {
 		return nil, err
 	}
 
-	cgs, err := buildDataset(pkgPath, targetRegex)
+	cgs, err := buildAnalysis(pkgPath, targetRegex)
 	if err != nil {
 		return nil, err
 	}

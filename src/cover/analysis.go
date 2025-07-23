@@ -14,20 +14,20 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-func buildDataset(path string, targetRegex *regexp.Regexp) (callgraphDataset, error) {
+func buildAnalysis(path string, targetRegex *regexp.Regexp) (analysis, error) {
 	pkgs, err := loadPackages(chaConfig(), path)
 	if err != nil {
-		return callgraphDataset{}, err
+		return analysis{}, err
 	}
 
 	ssaProg, ssaPkgs, err := buildSSAObjects(pkgs)
 	if err != nil {
-		return callgraphDataset{}, err
+		return analysis{}, err
 	}
 
 	targetSSAs := findTargetSSAFunctions(ssaPkgs, targetRegex)
 
-	results := callgraphDataset{
+	results := analysis{
 		callgraph:   cha.CallGraph(ssaProg),
 		asts:        buildASTMap(pkgs),
 		targetNodes: make(map[functionID]*callgraph.Node, len(targetSSAs)),
@@ -36,7 +36,7 @@ func buildDataset(path string, targetRegex *regexp.Regexp) (callgraphDataset, er
 	for functionID, targetSSA := range targetSSAs {
 		targetNode, ok := results.callgraph.Nodes[targetSSA]
 		if !ok {
-			return callgraphDataset{}, fmt.Errorf("failed to find callgraph node for function %s", targetSSA.Name())
+			return analysis{}, fmt.Errorf("failed to find callgraph node for function %s", targetSSA.Name())
 		}
 		results.targetNodes[functionID] = targetNode
 	}

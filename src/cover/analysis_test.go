@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildDataset(t *testing.T) {
+func TestBuildAnalysis(t *testing.T) {
 	tests := []struct {
 		name        string
 		path        string
@@ -168,7 +168,7 @@ func TestBuildDataset(t *testing.T) {
 			regex, err := regexp.Compile(tt.regex)
 			require.NoError(t, err)
 
-			cgs, err := buildDataset(tt.path, regex)
+			cgs, err := buildAnalysis(tt.path, regex)
 
 			if !tt.expectError {
 				assert.NoError(t, err)
@@ -207,7 +207,7 @@ func TestInbuiltFunctionsAreFilteredOut(t *testing.T) {
 	regex, err := regexp.Compile("init")
 	require.NoError(t, err)
 
-	cgs, err := buildDataset("github.com/leobishop234/deepcover/src/cover/test_data", regex)
+	cgs, err := buildAnalysis("github.com/leobishop234/deepcover/src/cover/test_data", regex)
 	require.NoError(t, err)
 
 	// Verify that no inbuilt functions are found
