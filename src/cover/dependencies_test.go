@@ -3,6 +3,7 @@ package cover
 import (
 	"testing"
 
+	"go/ast"
 	"go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -13,21 +14,25 @@ import (
 func TestExtractDependencies(t *testing.T) {
 	tests := []struct {
 		name           string
-		setupCallGraph func() *callgraph.Graph
+		setupCallGraph func() callgraphDataset
 		expectedDeps   []dependency
 		expectedError  bool
 	}{
 		{
 			name: "call graph with nil root",
-			setupCallGraph: func() *callgraph.Graph {
-				return &callgraph.Graph{Root: nil}
+			setupCallGraph: func() callgraphDataset {
+				return callgraphDataset{
+					callgraph:   &callgraph.Graph{Root: nil},
+					targetNodes: make(map[functionID]*callgraph.Node),
+					asts:        make(map[functionID]*ast.FuncDecl),
+				}
 			},
 			expectedDeps:  nil,
 			expectedError: true,
 		},
 		{
 			name: "root function not in a module",
-			setupCallGraph: func() *callgraph.Graph {
+			setupCallGraph: func() callgraphDataset {
 				knownPackages = map[string]knownPackage{}
 
 				pkg := types.NewPackage("non/existent/package", "nonexistent")
@@ -37,14 +42,18 @@ func TestExtractDependencies(t *testing.T) {
 				rootFunc.Pkg = ssaPkg
 
 				root := &callgraph.Node{Func: rootFunc}
-				return &callgraph.Graph{Root: root}
+				return callgraphDataset{
+					callgraph:   &callgraph.Graph{Root: root},
+					targetNodes: make(map[functionID]*callgraph.Node),
+					asts:        make(map[functionID]*ast.FuncDecl),
+				}
 			},
 			expectedDeps:  nil,
 			expectedError: true,
 		},
 		{
 			name: "single function in module",
-			setupCallGraph: func() *callgraph.Graph {
+			setupCallGraph: func() callgraphDataset {
 				// Pre-populate cache to simulate a package that is in a module
 				knownPackages = map[string]knownPackage{
 					"github.com/leobishop234/deepcover/src/cover": {
@@ -60,21 +69,42 @@ func TestExtractDependencies(t *testing.T) {
 				rootFunc.Pkg = ssaPkg
 
 				root := &callgraph.Node{Func: rootFunc}
-				return &callgraph.Graph{Root: root}
+
+				// Create a dummy AST function declaration
+				funcDecl := &ast.FuncDecl{
+					Name: &ast.Ident{Name: ""},
+				}
+
+				// Create the functionID for this function
+				funcID := functionID{
+					pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+					funcName: "", // Name() will return empty string for empty ssa.Function
+				}
+
+				return callgraphDataset{
+					callgraph: &callgraph.Graph{Root: root},
+					targetNodes: map[functionID]*callgraph.Node{
+						funcID: root,
+					},
+					asts: map[functionID]*ast.FuncDecl{
+						funcID: funcDecl,
+					},
+				}
 			},
 			expectedDeps: []dependency{
 				{
 					ModuleName: "github.com/leobishop234/deepcover",
-					PkgName:    "cover",
-					PkgPath:    "github.com/leobishop234/deepcover/src/cover",
-					FuncName:   "", // Name() will return empty string for empty ssa.Function
+					functionID: functionID{
+						pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+						funcName: "", // Name() will return empty string for empty ssa.Function
+					},
 				},
 			},
 			expectedError: false,
 		},
 		{
 			name: "multiple functions in same module",
-			setupCallGraph: func() *callgraph.Graph {
+			setupCallGraph: func() callgraphDataset {
 				knownPackages = map[string]knownPackage{
 					"github.com/leobishop234/deepcover/src/cover": {
 						hasModule: true,
@@ -97,20 +127,50 @@ func TestExtractDependencies(t *testing.T) {
 				root.Out = []*callgraph.Edge{edge}
 				called.In = []*callgraph.Edge{edge}
 
-				return &callgraph.Graph{Root: root}
+				// Create dummy AST function declarations
+				rootFuncDecl := &ast.FuncDecl{
+					Name: &ast.Ident{Name: ""},
+				}
+				calledFuncDecl := &ast.FuncDecl{
+					Name: &ast.Ident{Name: ""},
+				}
+
+				// Create functionIDs for both functions
+				rootFuncID := functionID{
+					pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+					funcName: "",
+				}
+				calledFuncID := functionID{
+					pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+					funcName: "",
+				}
+
+				return callgraphDataset{
+					callgraph: &callgraph.Graph{Root: root},
+					targetNodes: map[functionID]*callgraph.Node{
+						rootFuncID:   root,
+						calledFuncID: called,
+					},
+					asts: map[functionID]*ast.FuncDecl{
+						rootFuncID:   rootFuncDecl,
+						calledFuncID: calledFuncDecl,
+					},
+				}
 			},
 			expectedDeps: []dependency{
 				{
 					ModuleName: "github.com/leobishop234/deepcover",
-					PkgName:    "cover",
-					PkgPath:    "github.com/leobishop234/deepcover/src/cover",
-					FuncName:   "",
+					functionID: functionID{
+						pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+						funcName: "",
+					},
 				},
 				{
 					ModuleName: "github.com/leobishop234/deepcover",
-					PkgName:    "cover",
-					PkgPath:    "github.com/leobishop234/deepcover/src/cover",
-					FuncName:   "",
+					functionID: functionID{
+						pkgPath:  "github.com/leobishop234/deepcover/src/cover",
+						funcName: "",
+					},
 				},
 			},
 			expectedError: false,
@@ -121,7 +181,7 @@ func TestExtractDependencies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cg := tt.setupCallGraph()
 
-			deps, err := extractDependencies(cg, cg.Root)
+			deps, err := extractDependencies(cg, cg.callgraph.Root)
 
 			if tt.expectedError {
 				assert.Error(t, err)
@@ -130,19 +190,16 @@ func TestExtractDependencies(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, len(tt.expectedDeps), len(deps))
 
-				expectedMap := make(map[string]dependency)
-				for _, dep := range tt.expectedDeps {
-					key := dep.PkgPath + ":" + dep.FuncName
-					expectedMap[key] = dep
+				for i, expectedDep := range tt.expectedDeps {
+					if i < len(deps) {
+						actualDep := deps[i]
+						assert.Equal(t, expectedDep.ModuleName, actualDep.ModuleName)
+						assert.Equal(t, expectedDep.pkgPath, actualDep.pkgPath)
+						assert.Equal(t, expectedDep.funcName, actualDep.funcName)
+						assert.NotNil(t, actualDep.node)
+						assert.NotNil(t, actualDep.ast)
+					}
 				}
-
-				actualMap := make(map[string]dependency)
-				for _, dep := range deps {
-					key := dep.PkgPath + ":" + dep.FuncName
-					actualMap[key] = dep
-				}
-
-				assert.Equal(t, expectedMap, actualMap)
 			}
 		})
 	}

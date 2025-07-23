@@ -19,7 +19,7 @@ type callgraphDataset struct {
 
 type dependency struct {
 	ModuleName string
-	PkgName    string
-	PkgPath    string
-	FuncName   string
+	functionID
+	node *callgraph.Node
+	ast  *ast.FuncDecl
 }

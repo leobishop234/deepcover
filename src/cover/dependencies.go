@@ -11,7 +11,7 @@ func getDependencies(cgs callgraphDataset) (map[functionID][]dependency, error) 
 	dependencies := make(map[functionID][]dependency, len(cgs.targetNodes))
 	var err error
 	for targetID, targetNode := range cgs.targetNodes {
-		dependencies[targetID], err = extractDependencies(cgs.callgraph, targetNode)
+		dependencies[targetID], err = extractDependencies(cgs, targetNode)
 		if err != nil {
 			return nil, err
 		}
@@ -20,11 +20,7 @@ func getDependencies(cgs callgraphDataset) (map[functionID][]dependency, error) 
 	return dependencies, nil
 }
 
-func extractDependencies(cg *callgraph.Graph, start *callgraph.Node) ([]dependency, error) {
-	if cg == nil {
-		return nil, fmt.Errorf("call graph is nil")
-	}
-
+func extractDependencies(cg callgraphDataset, start *callgraph.Node) ([]dependency, error) {
 	if start == nil {
 		return nil, fmt.Errorf("start node is nil")
 	}
@@ -62,9 +58,15 @@ func extractDependencies(cg *callgraph.Graph, start *callgraph.Node) ([]dependen
 
 		dependencies = append(dependencies, dependency{
 			ModuleName: module,
-			PkgName:    current.Func.Pkg.Pkg.Name(),
-			PkgPath:    current.Func.Pkg.Pkg.Path(),
-			FuncName:   current.Func.Name(),
+			functionID: functionID{
+				pkgPath:  current.Func.Pkg.Pkg.Path(),
+				funcName: current.Func.Name(),
+			},
+			node: current,
+			ast: cg.asts[functionID{
+				pkgPath:  current.Func.Pkg.Pkg.Path(),
+				funcName: current.Func.Name(),
+			}],
 		})
 
 		for _, edge := range current.Out {

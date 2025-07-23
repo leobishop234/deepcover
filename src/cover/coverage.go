@@ -45,7 +45,7 @@ func collapseDependencies(dependencies map[functionID][]dependency) []dependency
 func runTests(path, target string, dependencies []dependency) (*os.File, error) {
 	packages := make([]string, len(dependencies))
 	for i, dependency := range dependencies {
-		packages[i] = dependency.PkgPath
+		packages[i] = dependency.pkgPath
 	}
 
 	coverageFile, err := os.CreateTemp("", "deepcover-*.out")
@@ -90,7 +90,7 @@ func calculateCoverageFromFile(coverageFile *os.File, dependencies []dependency)
 		}
 
 		for _, dependency := range dependencies {
-			if strings.Contains(funcCoverage.Path, dependency.PkgPath) && funcCoverage.Name == dependency.FuncName {
+			if strings.Contains(funcCoverage.Path, dependency.pkgPath) && funcCoverage.Name == dependency.funcName {
 				coverage = append(coverage, funcCoverage)
 				break
 			}

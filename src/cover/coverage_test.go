@@ -49,7 +49,7 @@ func TestGetCoverage(t *testing.T) {
 			target: "TestFunction",
 			dependenciesByTarget: map[functionID][]dependency{
 				{pkgPath: "github.com/example/pkg", funcName: "target1"}: {
-					{PkgPath: "github.com/example/pkg", FuncName: "Function"},
+					{ModuleName: "github.com/example/pkg", functionID: functionID{pkgPath: "github.com/example/pkg", funcName: "Function"}},
 				},
 			},
 			expectError:      true,
@@ -61,7 +61,7 @@ func TestGetCoverage(t *testing.T) {
 			target: "TestTop",
 			dependenciesByTarget: map[functionID][]dependency{
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Top"}},
 				},
 			},
 			expectError:      false,
@@ -73,11 +73,11 @@ func TestGetCoverage(t *testing.T) {
 			target: "TestTop",
 			dependenciesByTarget: map[functionID][]dependency{
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Top"}},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Bottom"}},
 				},
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target2"}: {
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Bottom"}},
 				},
 			},
 			expectError:      false,
@@ -89,8 +89,8 @@ func TestGetCoverage(t *testing.T) {
 			target: "TestBottom",
 			dependenciesByTarget: map[functionID][]dependency{
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "target1"}: {
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
-					{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Bottom"}},
+					{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", funcName: "SubPkg"}},
 				},
 			},
 			expectError:      false,
@@ -128,56 +128,56 @@ func TestCollapseDependencies(t *testing.T) {
 			name: "single target with single dependency",
 			dependencies: map[functionID][]dependency{
 				{pkgPath: "pkg1", funcName: "target1"}: {
-					{PkgPath: "pkg1", FuncName: "func1"},
+					{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
 				},
 			},
 			expectedResult: []dependency{
-				{PkgPath: "pkg1", FuncName: "func1"},
+				{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
 			},
 		},
 		{
 			name: "multiple targets with unique dependencies",
 			dependencies: map[functionID][]dependency{
 				{pkgPath: "pkg1", funcName: "target1"}: {
-					{PkgPath: "pkg1", FuncName: "func1"},
+					{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
 				},
 				{pkgPath: "pkg2", funcName: "target2"}: {
-					{PkgPath: "pkg2", FuncName: "func2"},
+					{ModuleName: "pkg2", functionID: functionID{pkgPath: "pkg2", funcName: "func2"}},
 				},
 			},
 			expectedResult: []dependency{
-				{PkgPath: "pkg1", FuncName: "func1"},
-				{PkgPath: "pkg2", FuncName: "func2"},
+				{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
+				{ModuleName: "pkg2", functionID: functionID{pkgPath: "pkg2", funcName: "func2"}},
 			},
 		},
 		{
 			name: "multiple targets with overlapping dependencies",
 			dependencies: map[functionID][]dependency{
 				{pkgPath: "pkg1", funcName: "target1"}: {
-					{PkgPath: "pkg1", FuncName: "func1"},
-					{PkgPath: "pkg2", FuncName: "func2"},
+					{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
+					{ModuleName: "pkg2", functionID: functionID{pkgPath: "pkg2", funcName: "func2"}},
 				},
 				{pkgPath: "pkg2", funcName: "target2"}: {
-					{PkgPath: "pkg2", FuncName: "func2"},
-					{PkgPath: "pkg3", FuncName: "func3"},
+					{ModuleName: "pkg2", functionID: functionID{pkgPath: "pkg2", funcName: "func2"}},
+					{ModuleName: "pkg3", functionID: functionID{pkgPath: "pkg3", funcName: "func3"}},
 				},
 			},
 			expectedResult: []dependency{
-				{PkgPath: "pkg1", FuncName: "func1"},
-				{PkgPath: "pkg2", FuncName: "func2"},
-				{PkgPath: "pkg3", FuncName: "func3"},
+				{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
+				{ModuleName: "pkg2", functionID: functionID{pkgPath: "pkg2", funcName: "func2"}},
+				{ModuleName: "pkg3", functionID: functionID{pkgPath: "pkg3", funcName: "func3"}},
 			},
 		},
 		{
 			name: "duplicate dependencies within same target",
 			dependencies: map[functionID][]dependency{
 				{pkgPath: "pkg1", funcName: "target1"}: {
-					{PkgPath: "pkg1", FuncName: "func1"},
-					{PkgPath: "pkg1", FuncName: "func1"},
+					{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
+					{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
 				},
 			},
 			expectedResult: []dependency{
-				{PkgPath: "pkg1", FuncName: "func1"},
+				{ModuleName: "pkg1", functionID: functionID{pkgPath: "pkg1", funcName: "func1"}},
 			},
 		},
 	}
@@ -210,7 +210,7 @@ func TestRunTests(t *testing.T) {
 			path:   "non_existent_path",
 			target: "TestFunction",
 			dependencies: []dependency{
-				{PkgPath: "github.com/example/pkg", FuncName: "Function"},
+				{ModuleName: "github.com/example/pkg", functionID: functionID{pkgPath: "github.com/example/pkg", funcName: "Function"}},
 			},
 			expectError: true,
 		},
@@ -219,7 +219,7 @@ func TestRunTests(t *testing.T) {
 			path:   getTestDataPath(),
 			target: "TestTop",
 			dependencies: []dependency{
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Top"}},
 			},
 			expectError: false,
 		},
@@ -228,8 +228,8 @@ func TestRunTests(t *testing.T) {
 			path:   getTestDataPath(),
 			target: "TestBottom",
 			dependencies: []dependency{
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Bottom"}},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", funcName: "SubPkg"}},
 			},
 			expectError: false,
 		},
@@ -296,7 +296,7 @@ github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:14.2,16.
 		{
 			name: "single matching dependency",
 			dependencies: []dependency{
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Top"}},
 			},
 			expectError:         false,
 			expectCoverageCount: 1,
@@ -304,9 +304,9 @@ github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:14.2,16.
 		{
 			name: "multiple dependencies with matches",
 			dependencies: []dependency{
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Top"},
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", FuncName: "Bottom"},
-				{PkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", FuncName: "SubPkg"},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Top"}},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "Bottom"}},
+				{ModuleName: "github.com/leobishop234/deepcover", functionID: functionID{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data/subpkg", funcName: "SubPkg"}},
 			},
 			expectError:         false,
 			expectCoverageCount: 3,
@@ -314,7 +314,7 @@ github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:14.2,16.
 		{
 			name: "dependencies with no matches",
 			dependencies: []dependency{
-				{PkgPath: "github.com/non/existent", FuncName: "Function"},
+				{ModuleName: "github.com/non/existent", functionID: functionID{pkgPath: "github.com/non/existent", funcName: "Function"}},
 			},
 			expectError:         false,
 			expectCoverageCount: 0,
