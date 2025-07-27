@@ -57,7 +57,7 @@ func runTests(path, target string, dependencies []dependency) (*os.File, error) 
 		"go", "test",
 		"-run", target,
 		"-coverprofile="+coverageFile.Name(),
-		"-covermode=atomic",
+		"-covermode=set",
 		"-coverpkg="+strings.Join(packages, ","),
 		path,
 	)
