@@ -11,7 +11,7 @@ import (
 
 const mode = "set"
 
-func getCoverage(path, target string, dependenciesByTarget map[functionID][]dependency) ([]Coverage, error) {
+func calculateFunctionCoverages(path, target string, dependenciesByTarget map[functionID][]dependency) ([]Coverage, error) {
 	dependencies := collapseDependencies(dependenciesByTarget)
 
 	coverageFile, err := runTests(path, target, dependencies)
@@ -20,10 +20,13 @@ func getCoverage(path, target string, dependenciesByTarget map[functionID][]depe
 	}
 	defer os.Remove(coverageFile.Name())
 
-	coverage, err := calculateCoverageFromFile(coverageFile, dependencies)
+	coverage, err := calculateFunctionCoverageFromFile(coverageFile, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate coverage: %v", err)
 	}
+
+	total := approxTotalCoverage(coverage)
+	fmt.Printf("total: %f\n", total)
 
 	return coverage, nil
 }
@@ -71,11 +74,10 @@ func runTests(path, target string, dependencies []dependency) (*os.File, error) 
 	return coverageFile, nil
 }
 
-func calculateCoverageFromFile(coverageFile *os.File, dependencies []dependency) ([]Coverage, error) {
+func calculateFunctionCoverageFromFile(coverageFile *os.File, dependencies []dependency) ([]Coverage, error) {
 	output, err := exec.Command(
 		"go", "tool", "cover",
 		"-func="+coverageFile.Name(),
-		"-mode="+mode,
 	).Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage: %v", err)
@@ -94,6 +96,12 @@ func calculateCoverageFromFile(coverageFile *os.File, dependencies []dependency)
 
 		for _, dependency := range dependencies {
 			if strings.Contains(funcCoverage.Path, dependency.pkgPath) && funcCoverage.Name == dependency.funcName {
+				if dependency.ast != nil {
+					if dependency.ast.Body != nil {
+						funcCoverage.Statements = len(dependency.ast.Body.List)
+					}
+					funcCoverage.Lines = int(dependency.ast.End() - dependency.ast.Pos())
+				}
 				coverage = append(coverage, funcCoverage)
 				break
 			}
@@ -129,4 +137,14 @@ func parseCoverageRow(row string) (Coverage, bool, error) {
 		Name:     parts[1],
 		Coverage: coverage,
 	}, true, nil
+}
+
+func approxTotalCoverage(coverage []Coverage) float64 {
+	var total float64 = 0
+	var covered float64 = 0
+	for _, c := range coverage {
+		total += float64(c.Statements)
+		covered += float64(c.Statements) * c.Coverage / 100
+	}
+	return covered / total * 100
 }

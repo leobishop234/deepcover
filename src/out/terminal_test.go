@@ -8,22 +8,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var terminalTestCoverage = []cover.Coverage{
-	{
-		Path:     "example/path/file1.go",
-		Name:     "package.Function1",
-		Coverage: 100,
+var terminalTestCoverage = cover.Result{
+	Coverage: []cover.Coverage{
+		{
+			Path:     "example/path/file1.go",
+			Name:     "package.Function1",
+			Coverage: 100,
+		},
+		{
+			Path:     "example/path/file2.go",
+			Name:     "package.Function2",
+			Coverage: 50,
+		},
+		{
+			Path:     "example/path/file3.go",
+			Name:     "package.Function3",
+			Coverage: 0,
+		},
 	},
-	{
-		Path:     "example/path/file2.go",
-		Name:     "package.Function2",
-		Coverage: 50,
-	},
-	{
-		Path:     "example/path/file3.go",
-		Name:     "package.Function3",
-		Coverage: 0,
-	},
+	ApproxTotalCoverage: 50,
 }
 
 func TestOutputTerminal(t *testing.T) {
@@ -45,6 +48,8 @@ func TestFormatTerminal(t *testing.T) {
 	assert.Contains(t, result, "50.0%")
 	assert.Contains(t, result, "0.0%")
 
+	assert.Contains(t, result, "Approximate Total: 50.00%")
+
 	lines := strings.Split(strings.TrimSpace(result), "\n")
-	assert.Equal(t, 5, len(lines))
+	assert.Equal(t, 7, len(lines))
 }

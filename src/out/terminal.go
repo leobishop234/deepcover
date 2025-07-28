@@ -7,13 +7,13 @@ import (
 	"github.com/leobishop234/deepcover/src/cover"
 )
 
-func OutputTerminal(coverage []cover.Coverage) {
+func OutputTerminal(coverage cover.Result) {
 	fmt.Print(formatTerminal(coverage))
 }
 
-func formatTerminal(coverage []cover.Coverage) string {
+func formatTerminal(coverage cover.Result) string {
 	var pathLen, nameLen, coverageLen int
-	for _, funcCoverage := range coverage {
+	for _, funcCoverage := range coverage.Coverage {
 		if len(funcCoverage.Path) > pathLen {
 			pathLen = len(funcCoverage.Path)
 		}
@@ -36,7 +36,7 @@ func formatTerminal(coverage []cover.Coverage) string {
 	result.WriteString(strings.Repeat("-", len(title)))
 	result.WriteString("\n")
 
-	for _, funcCoverage := range coverage {
+	for _, funcCoverage := range coverage.Coverage {
 		coverageStr := fmt.Sprintf("%.1f%%", funcCoverage.Coverage)
 		line := fmt.Sprintf("%-*s %-*s %-*s\n",
 			pathLen,
@@ -47,7 +47,9 @@ func formatTerminal(coverage []cover.Coverage) string {
 			coverageStr)
 		result.WriteString(line)
 	}
+
 	result.WriteString("\n")
+	result.WriteString(fmt.Sprintf("Approximate Total: %.2f%%\n", coverage.ApproxTotalCoverage))
 
 	return result.String()
 }
