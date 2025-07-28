@@ -5,9 +5,10 @@ import (
 )
 
 type Coverage struct {
-	Path     string
-	Name     string
-	Coverage float64
+	Path       string
+	Name       string
+	Statements int
+	Coverage   float64
 }
 
 func Deepcover(pkgPath, target string) ([]Coverage, error) {

@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const mode = "set"
+
 func getCoverage(path, target string, dependenciesByTarget map[functionID][]dependency) ([]Coverage, error) {
 	dependencies := collapseDependencies(dependenciesByTarget)
 
@@ -57,7 +59,7 @@ func runTests(path, target string, dependencies []dependency) (*os.File, error) 
 		"go", "test",
 		"-run", target,
 		"-coverprofile="+coverageFile.Name(),
-		"-covermode=set",
+		"-covermode="+mode,
 		"-coverpkg="+strings.Join(packages, ","),
 		path,
 	)
@@ -73,6 +75,7 @@ func calculateCoverageFromFile(coverageFile *os.File, dependencies []dependency)
 	output, err := exec.Command(
 		"go", "tool", "cover",
 		"-func="+coverageFile.Name(),
+		"-mode="+mode,
 	).Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage: %v", err)
