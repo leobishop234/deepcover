@@ -48,8 +48,7 @@ func formatTerminal(coverage cover.Result) string {
 		result.WriteString(line)
 	}
 
-	result.WriteString("\n")
-	result.WriteString(fmt.Sprintf("Approximate Total: %.2f%%\n", coverage.ApproxTotalCoverage))
+	result.WriteString(fmt.Sprintf("Approximate Total: %.2f%%", coverage.ApproxTotalCoverage))
 
 	return result.String()
 }

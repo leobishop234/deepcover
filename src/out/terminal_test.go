@@ -51,5 +51,5 @@ func TestFormatTerminal(t *testing.T) {
 	assert.Contains(t, result, "Approximate Total: 50.00%")
 
 	lines := strings.Split(strings.TrimSpace(result), "\n")
-	assert.Equal(t, 7, len(lines))
+	assert.Equal(t, 6, len(lines))
 }
