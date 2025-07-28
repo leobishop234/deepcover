@@ -13,7 +13,6 @@ type Coverage struct {
 	Path       string
 	Name       string
 	Statements int
-	Lines      int
 	Coverage   float64
 }
 

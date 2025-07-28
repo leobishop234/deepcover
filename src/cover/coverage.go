@@ -25,9 +25,6 @@ func calculateFunctionCoverages(path, target string, dependenciesByTarget map[fu
 		return nil, fmt.Errorf("failed to calculate coverage: %v", err)
 	}
 
-	total := approxTotalCoverage(coverage)
-	fmt.Printf("total: %f\n", total)
-
 	return coverage, nil
 }
 
@@ -100,7 +97,6 @@ func calculateFunctionCoverageFromFile(coverageFile *os.File, dependencies []dep
 					if dependency.ast.Body != nil {
 						funcCoverage.Statements = len(dependency.ast.Body.List)
 					}
-					funcCoverage.Lines = int(dependency.ast.End() - dependency.ast.Pos())
 				}
 				coverage = append(coverage, funcCoverage)
 				break
@@ -140,11 +136,22 @@ func parseCoverageRow(row string) (Coverage, bool, error) {
 }
 
 func approxTotalCoverage(coverage []Coverage) float64 {
+	if len(coverage) == 0 {
+		return 0
+	}
+
 	var total float64 = 0
 	var covered float64 = 0
 	for _, c := range coverage {
+		if c.Statements == 0 {
+			continue
+		}
 		total += float64(c.Statements)
 		covered += float64(c.Statements) * c.Coverage / 100
+	}
+
+	if total == 0 {
+		return 0
 	}
 	return covered / total * 100
 }
