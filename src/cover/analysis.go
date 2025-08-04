@@ -3,7 +3,6 @@ package cover
 import (
 	"errors"
 	"fmt"
-	"go/ast"
 	"go/token"
 	"regexp"
 
@@ -29,7 +28,6 @@ func buildAnalysis(path string, targetRegex *regexp.Regexp) (analysis, error) {
 
 	results := analysis{
 		callgraph:   cha.CallGraph(ssaProg),
-		asts:        buildASTMap(pkgs),
 		targetNodes: make(map[functionID]*callgraph.Node, len(targetSSAs)),
 	}
 
@@ -107,19 +105,4 @@ func findTargetSSAFunctions(pkgs []*ssa.Package, targetRegex *regexp.Regexp) map
 	}
 
 	return targetFuncs
-}
-
-func buildASTMap(pkgs []*packages.Package) map[functionID]*ast.FuncDecl {
-	astFuncs := make(map[functionID]*ast.FuncDecl)
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Syntax {
-			ast.Inspect(file, func(n ast.Node) bool {
-				if fn, ok := n.(*ast.FuncDecl); ok && !isInbuiltFunction(fn.Name.Name) {
-					astFuncs[functionID{pkgPath: pkg.PkgPath, funcName: fn.Name.Name}] = fn
-				}
-				return true
-			})
-		}
-	}
-	return astFuncs
 }

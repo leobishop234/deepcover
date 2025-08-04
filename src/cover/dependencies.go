@@ -64,10 +64,6 @@ func extractDependencies(cg analysis, start *callgraph.Node) ([]dependency, erro
 			},
 			ssaFunction: current.Func,
 			node:        current,
-			ast: cg.asts[functionID{
-				pkgPath:  current.Func.Pkg.Pkg.Path(),
-				funcName: current.Func.Name(),
-			}],
 		})
 
 		for _, edge := range current.Out {

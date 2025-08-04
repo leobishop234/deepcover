@@ -95,9 +95,7 @@ func calculateFunctionCoverageFromFile(coverageFile *os.File, dependencies []dep
 
 		for _, dependency := range dependencies {
 			if strings.Contains(funcCoverage.Path, dependency.pkgPath) && funcCoverage.Name == dependency.funcName {
-				if dependency.ast != nil {
-					funcCoverage.Statements = countFunctionStatements(dependency.ssaFunction)
-				}
+				funcCoverage.Statements = countFunctionStatements(dependency.ssaFunction)
 				coverage = append(coverage, funcCoverage)
 				break
 			}
@@ -157,5 +155,8 @@ func approxTotalCoverage(coverage []Coverage) float64 {
 }
 
 func countFunctionStatements(fn *ssa.Function) int {
+	if fn == nil {
+		return 0
+	}
 	return len(fn.Blocks)
 }

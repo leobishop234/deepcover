@@ -1,8 +1,6 @@
 package cover
 
 import (
-	"go/ast"
-
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/ssa"
 )
@@ -15,7 +13,6 @@ type functionID struct {
 type analysis struct {
 	callgraph   *callgraph.Graph
 	targetNodes map[functionID]*callgraph.Node
-	asts        map[functionID]*ast.FuncDecl
 }
 
 type dependency struct {
@@ -23,5 +20,4 @@ type dependency struct {
 	functionID
 	ssaFunction *ssa.Function
 	node        *callgraph.Node
-	ast         *ast.FuncDecl
 }

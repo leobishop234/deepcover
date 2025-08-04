@@ -174,7 +174,6 @@ func TestBuildAnalysis(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, cgs.callgraph)
 				assert.NotNil(t, cgs.targetNodes)
-				assert.NotNil(t, cgs.asts)
 			} else {
 				assert.Error(t, err)
 				return
@@ -187,12 +186,6 @@ func TestBuildAnalysis(t *testing.T) {
 					gotNode := cgs.targetNodes[wantFunc]
 					assert.NotNil(t, gotNode, "Callgraph node should not be nil for function %v", wantFunc)
 					assert.Equal(t, wantFunc.funcName, gotNode.Func.Name(), "SSA function name should match")
-
-					// Verify the AST exists
-					if astFunc, ok := cgs.asts[wantFunc]; ok {
-						assert.NotNil(t, astFunc, "AST function should not be nil for function %v", wantFunc)
-						assert.Equal(t, wantFunc.funcName, astFunc.Name.Name, "AST function name should match")
-					}
 				}
 			}
 

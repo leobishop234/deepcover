@@ -3,7 +3,6 @@ package cover
 import (
 	"testing"
 
-	"go/ast"
 	"go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,6 @@ func TestExtractDependencies(t *testing.T) {
 				return analysis{
 					callgraph:   &callgraph.Graph{Root: nil},
 					targetNodes: make(map[functionID]*callgraph.Node),
-					asts:        make(map[functionID]*ast.FuncDecl),
 				}
 			},
 			expectedDeps:  nil,
@@ -45,7 +43,6 @@ func TestExtractDependencies(t *testing.T) {
 				return analysis{
 					callgraph:   &callgraph.Graph{Root: root},
 					targetNodes: make(map[functionID]*callgraph.Node),
-					asts:        make(map[functionID]*ast.FuncDecl),
 				}
 			},
 			expectedDeps:  nil,
@@ -70,11 +67,6 @@ func TestExtractDependencies(t *testing.T) {
 
 				root := &callgraph.Node{Func: rootFunc}
 
-				// Create a dummy AST function declaration
-				funcDecl := &ast.FuncDecl{
-					Name: &ast.Ident{Name: ""},
-				}
-
 				// Create the functionID for this function
 				funcID := functionID{
 					pkgPath:  "github.com/leobishop234/deepcover/src/cover",
@@ -85,9 +77,6 @@ func TestExtractDependencies(t *testing.T) {
 					callgraph: &callgraph.Graph{Root: root},
 					targetNodes: map[functionID]*callgraph.Node{
 						funcID: root,
-					},
-					asts: map[functionID]*ast.FuncDecl{
-						funcID: funcDecl,
 					},
 				}
 			},
@@ -127,14 +116,6 @@ func TestExtractDependencies(t *testing.T) {
 				root.Out = []*callgraph.Edge{edge}
 				called.In = []*callgraph.Edge{edge}
 
-				// Create dummy AST function declarations
-				rootFuncDecl := &ast.FuncDecl{
-					Name: &ast.Ident{Name: ""},
-				}
-				calledFuncDecl := &ast.FuncDecl{
-					Name: &ast.Ident{Name: ""},
-				}
-
 				// Create functionIDs for both functions
 				rootFuncID := functionID{
 					pkgPath:  "github.com/leobishop234/deepcover/src/cover",
@@ -150,10 +131,6 @@ func TestExtractDependencies(t *testing.T) {
 					targetNodes: map[functionID]*callgraph.Node{
 						rootFuncID:   root,
 						calledFuncID: called,
-					},
-					asts: map[functionID]*ast.FuncDecl{
-						rootFuncID:   rootFuncDecl,
-						calledFuncID: calledFuncDecl,
 					},
 				}
 			},
@@ -197,7 +174,6 @@ func TestExtractDependencies(t *testing.T) {
 						assert.Equal(t, expectedDep.pkgPath, actualDep.pkgPath)
 						assert.Equal(t, expectedDep.funcName, actualDep.funcName)
 						assert.NotNil(t, actualDep.node)
-						assert.NotNil(t, actualDep.ast)
 					}
 				}
 			}
