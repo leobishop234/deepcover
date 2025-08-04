@@ -55,6 +55,8 @@ Deepcover outputs a table showing:
 - **FUNCTION**: The function name
 - **COVERAGE**: The percentage of the function covered by the tests
 
+**Total:** is also shown, this value is calculated dynamically from SSA representations of dependency functions.
+
 Example output:
 ```
 $ deepcover -run "Test.*" ./src/cover/test_data
@@ -66,6 +68,7 @@ github.com/leobishop234/deepcover/src/cover/test_data/example.go:16:          Al
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:9:         newInterface   100.0%
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:15:        Method         66.7%
 github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   SubPkg         100.0%  
+Total: 91.68%
 ```
 
 ## Requirements

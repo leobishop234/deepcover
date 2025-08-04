@@ -7,25 +7,30 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/go/ssa"
 )
 
-type Coverage struct {
-	Path     string
-	Name     string
-	Coverage float64
-}
+const mode = "set"
 
-func getCoverage(path, target string, dependenciesByTarget map[string][]dependency) ([]Coverage, error) {
+func calculateFunctionCoverages(path, target string, dependenciesByTarget map[functionID][]dependency) ([]Coverage, error) {
 	dependencies := collapseDependencies(dependenciesByTarget)
-	coverage, err := runTests(path, target, dependencies)
+
+	coverageFile, err := runTests(path, target, dependencies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coverage: %v", err)
+	}
+	defer os.Remove(coverageFile.Name())
+
+	coverage, err := calculateFunctionCoverageFromFile(coverageFile, dependencies)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate coverage: %v", err)
 	}
 
 	return coverage, nil
 }
 
-func collapseDependencies(dependencies map[string][]dependency) []dependency {
+func collapseDependencies(dependencies map[functionID][]dependency) []dependency {
 	depMap := make(map[dependency]bool)
 	for _, deps := range dependencies {
 		for _, dep := range deps {
@@ -41,30 +46,34 @@ func collapseDependencies(dependencies map[string][]dependency) []dependency {
 	return collapsed
 }
 
-func runTests(path, target string, dependencies []dependency) ([]Coverage, error) {
+func runTests(path, target string, dependencies []dependency) (*os.File, error) {
 	packages := make([]string, len(dependencies))
 	for i, dependency := range dependencies {
-		packages[i] = dependency.PkgPath
+		packages[i] = dependency.pkgPath
 	}
 
 	coverageFile, err := os.CreateTemp("", "deepcover-*.out")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(coverageFile.Name())
 
 	cmd := exec.Command(
 		"go", "test",
 		"-run", target,
 		"-coverprofile="+coverageFile.Name(),
-		"-covermode=set",
+		"-covermode="+mode,
 		"-coverpkg="+strings.Join(packages, ","),
 		path,
 	)
 	if err := cmd.Run(); err != nil {
+		os.Remove(coverageFile.Name())
 		return nil, fmt.Errorf("failed to run tests: %v", err)
 	}
 
+	return coverageFile, nil
+}
+
+func calculateFunctionCoverageFromFile(coverageFile *os.File, dependencies []dependency) ([]Coverage, error) {
 	output, err := exec.Command(
 		"go", "tool", "cover",
 		"-func="+coverageFile.Name(),
@@ -85,7 +94,8 @@ func runTests(path, target string, dependencies []dependency) ([]Coverage, error
 		}
 
 		for _, dependency := range dependencies {
-			if strings.Contains(funcCoverage.Path, dependency.PkgPath) && funcCoverage.Name == dependency.FuncName {
+			if strings.Contains(funcCoverage.Path, dependency.pkgPath) && funcCoverage.Name == dependency.funcName {
+				funcCoverage.Statements = countFunctionStatements(dependency.ssaFunction)
 				coverage = append(coverage, funcCoverage)
 				break
 			}
@@ -121,4 +131,32 @@ func parseCoverageRow(row string) (Coverage, bool, error) {
 		Name:     parts[1],
 		Coverage: coverage,
 	}, true, nil
+}
+
+func calculateTotalCoverage(coverage []Coverage) float64 {
+	if len(coverage) == 0 {
+		return 0
+	}
+
+	var total float64 = 0
+	var covered float64 = 0
+	for _, c := range coverage {
+		if c.Statements == 0 {
+			continue
+		}
+		total += float64(c.Statements)
+		covered += float64(c.Statements) * c.Coverage / 100
+	}
+
+	if total == 0 {
+		return 0
+	}
+	return covered / total * 100
+}
+
+func countFunctionStatements(fn *ssa.Function) int {
+	if fn == nil {
+		return 0
+	}
+	return len(fn.Blocks)
 }

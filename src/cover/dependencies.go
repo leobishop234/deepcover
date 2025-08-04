@@ -7,18 +7,11 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-type dependency struct {
-	ModuleName string
-	PkgName    string
-	PkgPath    string
-	FuncName   string
-}
-
-func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, error) {
-	dependencies := make(map[string][]dependency, len(cgs))
+func getDependencies(cgs analysis) (map[functionID][]dependency, error) {
+	dependencies := make(map[functionID][]dependency, len(cgs.targetNodes))
 	var err error
-	for target, cg := range cgs {
-		dependencies[target], err = extractDependencies(cg)
+	for targetID, targetNode := range cgs.targetNodes {
+		dependencies[targetID], err = extractDependencies(cgs, targetNode)
 		if err != nil {
 			return nil, err
 		}
@@ -27,12 +20,12 @@ func getDependencies(cgs map[string]*callgraph.Graph) (map[string][]dependency, 
 	return dependencies, nil
 }
 
-func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
-	if cg == nil {
-		return nil, fmt.Errorf("call graph is nil")
+func extractDependencies(cg analysis, start *callgraph.Node) ([]dependency, error) {
+	if start == nil {
+		return nil, fmt.Errorf("start node is nil")
 	}
 
-	rootModule, hasRootModule, err := getNodeModule(cg.Root)
+	rootModule, hasRootModule, err := getNodeModule(start)
 	if err != nil {
 		return nil, err
 	} else if !hasRootModule {
@@ -42,7 +35,7 @@ func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
 	dependencies := []dependency{}
 
 	visited := map[*callgraph.Node]bool{}
-	queue := []*callgraph.Node{cg.Root}
+	queue := []*callgraph.Node{start}
 
 	for len(queue) > 0 {
 		current := queue[0]
@@ -65,9 +58,12 @@ func extractDependencies(cg *callgraph.Graph) ([]dependency, error) {
 
 		dependencies = append(dependencies, dependency{
 			ModuleName: module,
-			PkgName:    current.Func.Pkg.Pkg.Name(),
-			PkgPath:    current.Func.Pkg.Pkg.Path(),
-			FuncName:   current.Func.Name(),
+			functionID: functionID{
+				pkgPath:  current.Func.Pkg.Pkg.Path(),
+				funcName: current.Func.Name(),
+			},
+			ssaFunction: current.Func,
+			node:        current,
 		})
 
 		for _, edge := range current.Out {

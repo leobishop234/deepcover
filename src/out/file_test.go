@@ -9,22 +9,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var fileTestCoverage = []cover.Coverage{
-	{
-		Path:     "example/path/file1.go",
-		Name:     "package.Function1",
-		Coverage: 100,
+var fileTestCoverage = cover.Result{
+	Coverage: []cover.Coverage{
+		{
+			Path:     "example/path/file1.go",
+			Name:     "package.Function1",
+			Coverage: 100,
+		},
+		{
+			Path:     "example/path/file2.go",
+			Name:     "package.Function2",
+			Coverage: 50,
+		},
+		{
+			Path:     "example/path/file3.go",
+			Name:     "package.Function3",
+			Coverage: 0,
+		},
 	},
-	{
-		Path:     "example/path/file2.go",
-		Name:     "package.Function2",
-		Coverage: 50,
-	},
-	{
-		Path:     "example/path/file3.go",
-		Name:     "package.Function3",
-		Coverage: 0,
-	},
+	ApproxTotalCoverage: 50,
 }
 
 func TestOutputFile(t *testing.T) {
@@ -40,9 +43,10 @@ func TestOutputFile(t *testing.T) {
 }
 
 func TestFormatFile(t *testing.T) {
-	expected := `package.Function1		example/path/file1.go		100.0%
-package.Function2		example/path/file2.go		50.0%
-package.Function3		example/path/file3.go		0.0%
+	expected := `package.Function1		example/path/file1.go		100.00%
+package.Function2		example/path/file2.go		50.00%
+package.Function3		example/path/file3.go		0.00%
+Total: 50.00%
 `
 
 	got := formatFile(fileTestCoverage)
