@@ -46,7 +46,7 @@ func TestFormatFile(t *testing.T) {
 	expected := `package.Function1		example/path/file1.go		100.00%
 package.Function2		example/path/file2.go		50.00%
 package.Function3		example/path/file3.go		0.00%
-Approximate Total: 50.00%
+Total: 50.00%
 `
 
 	got := formatFile(fileTestCoverage)

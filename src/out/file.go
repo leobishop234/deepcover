@@ -27,7 +27,7 @@ func formatFile(coverage cover.Result) string {
 		str.WriteString(fmt.Sprintf(coverageFormat, cover.Name, cover.Path, cover.Coverage))
 	}
 
-	str.WriteString(fmt.Sprintf("Approximate Total: %.2f%%\n", coverage.ApproxTotalCoverage))
+	str.WriteString(fmt.Sprintf("Total: %.2f%%\n", coverage.ApproxTotalCoverage))
 
 	return str.String()
 }

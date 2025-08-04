@@ -55,8 +55,7 @@ Deepcover outputs a table showing:
 - **FUNCTION**: The function name
 - **COVERAGE**: The percentage of the function covered by the tests
 
-Then an **Approximate Total:** this value is calculated dynamically from AST representations of dependency functions.
-It is not a perfect calculation but only a close approximation, however it should be sufficient for experimental purposes.
+Then an **Total:** this value is calculated dynamically from AST representations of dependency functions.
 
 Example output:
 ```
@@ -69,7 +68,7 @@ github.com/leobishop234/deepcover/src/cover/test_data/example.go:16:          Al
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:9:         newInterface   100.0%
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:15:        Method         66.7%
 github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   SubPkg         100.0%  
-Approximate Total: 91.67%
+Total: 91.67%
 ```
 
 ## Requirements

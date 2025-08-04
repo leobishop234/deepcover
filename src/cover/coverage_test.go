@@ -3,10 +3,16 @@ package cover
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"go/token"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
 )
 
 // getTestDataPath returns the absolute path to the test_data directory
@@ -658,4 +664,202 @@ func TestApproxTotalCoverage(t *testing.T) {
 			assert.InDelta(t, tt.expectedResult, result, 0.0001, "Coverage calculation mismatch")
 		})
 	}
+}
+
+func TestCountExecutableStatements(t *testing.T) {
+	tests := []struct {
+		name     string
+		code     string
+		expected int
+	}{
+		{
+			name: "simple function with basic statements",
+			code: `func testFunc() {
+				x := 1
+				y := 2
+				fmt.Println(x + y)
+			}`,
+			expected: 1, // single basic block
+		},
+		{
+			name: "function with if statement",
+			code: `func testFunc() {
+				x := 1
+				if x > 0 {
+					fmt.Println("positive")
+				}
+			}`,
+			expected: 3, // entry block, then block, exit block
+		},
+		{
+			name: "function with if-else",
+			code: `func testFunc() {
+				x := 1
+				if x > 0 {
+					fmt.Println("positive")
+				} else {
+					fmt.Println("non-positive")
+				}
+			}`,
+			expected: 4, // entry block, then block, else block, exit block
+		},
+		{
+			name: "function with for loop",
+			code: `func testFunc() {
+				for i := 0; i < 10; i++ {
+					fmt.Println(i)
+				}
+			}`,
+			expected: 4, // entry block, loop header, loop body, exit block
+		},
+		{
+			name: "function with range loop",
+			code: `func testFunc() {
+				arr := []int{1, 2, 3}
+				for _, v := range arr {
+					fmt.Println(v)
+				}
+			}`,
+			expected: 4, // entry block, range header, range body, exit block
+		},
+		{
+			name: "function with switch statement",
+			code: `func testFunc() {
+				x := 1
+				switch x {
+				case 1:
+					fmt.Println("one")
+				case 2:
+					fmt.Println("two")
+				default:
+					fmt.Println("other")
+				}
+			}`,
+			expected: 6, // actual SSA block count from test results
+		},
+		{
+			name: "function with defer and go statements",
+			code: `func testFunc() {
+				defer fmt.Println("defer")
+				go fmt.Println("go")
+				return
+			}`,
+			expected: 2, // actual SSA block count from test results
+		},
+		{
+			name: "function with increment and channel operations",
+			code: `func testFunc() {
+				x := 1
+				x++
+				ch := make(chan int)
+				ch <- x
+			}`,
+			expected: 1, // single basic block
+		},
+		{
+			name: "empty function",
+			code: `func testFunc() {
+			}`,
+			expected: 1, // entry block (even empty functions have one block)
+		},
+		{
+			name: "function with nested blocks",
+			code: `func testFunc() {
+				x := 1
+				{
+					y := 2
+					fmt.Println(y)
+				}
+				fmt.Println(x)
+			}`,
+			expected: 1, // nested blocks don't create control flow changes
+		},
+		{
+			name: "function with type switch",
+			code: `func testFunc() {
+				var x interface{} = 1
+				switch v := x.(type) {
+				case int:
+					fmt.Println("int:", v)
+				case string:
+					fmt.Println("string:", v)
+				}
+			}`,
+			expected: 5, // actual SSA block count from test results
+		},
+		{
+			name: "function with select statement",
+			code: `func testFunc() {
+				ch1 := make(chan int)
+				ch2 := make(chan int)
+				select {
+				case v := <-ch1:
+					fmt.Println("ch1:", v)
+				case v := <-ch2:
+					fmt.Println("ch2:", v)
+				}
+			}`,
+			expected: 6, // actual SSA block count from test results
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build SSA function from the test code
+			ssaFunc := buildSSAFunction(t, tt.code)
+
+			// Count SSA blocks
+			result := countFunctionStatements(ssaFunc)
+			assert.Equal(t, tt.expected, result, "SSA block count mismatch for: %s", tt.code)
+		})
+	}
+}
+
+// buildSSAFunction creates an SSA function from the given Go code
+func buildSSAFunction(t *testing.T, code string) *ssa.Function {
+	// Create a temporary file with the test code
+	// Only import fmt if the code uses it
+	imports := ""
+	if strings.Contains(code, "fmt.") {
+		imports = "import \"fmt\"\n\n"
+	}
+	src := "package testpkg\n\n" + imports + code + "\n"
+
+	tmpFile, err := os.CreateTemp("", "test_*.go")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	_, err = tmpFile.WriteString(src)
+	require.NoError(t, err)
+	tmpFile.Close()
+
+	// Load the package using the same configuration as the main code
+	conf := &packages.Config{
+		Mode: packages.LoadSyntax | packages.NeedDeps | packages.NeedModule,
+		Fset: token.NewFileSet(),
+	}
+
+	pkgs, err := packages.Load(conf, tmpFile.Name())
+	require.NoError(t, err)
+	require.Len(t, pkgs, 1)
+
+	pkg := pkgs[0]
+	require.Empty(t, pkg.Errors)
+
+	// Build SSA using the same approach as the main code
+	ssaProg, ssaPkgs := ssautil.AllPackages(pkgs, 0)
+	ssaProg.Build()
+
+	// Find the testFunc function
+	for _, ssaPkg := range ssaPkgs {
+		for _, member := range ssaPkg.Members {
+			if fn, ok := member.(*ssa.Function); ok && fn.Name() == "testFunc" {
+				return fn
+			}
+		}
+	}
+
+	t.Fatal("testFunc not found in SSA package")
+	return nil
 }

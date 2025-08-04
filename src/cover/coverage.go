@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/go/ssa"
 )
 
 const mode = "set"
@@ -94,9 +96,7 @@ func calculateFunctionCoverageFromFile(coverageFile *os.File, dependencies []dep
 		for _, dependency := range dependencies {
 			if strings.Contains(funcCoverage.Path, dependency.pkgPath) && funcCoverage.Name == dependency.funcName {
 				if dependency.ast != nil {
-					if dependency.ast.Body != nil {
-						funcCoverage.Statements = len(dependency.ast.Body.List)
-					}
+					funcCoverage.Statements = countFunctionStatements(dependency.ssaFunction)
 				}
 				coverage = append(coverage, funcCoverage)
 				break
@@ -154,4 +154,8 @@ func approxTotalCoverage(coverage []Coverage) float64 {
 		return 0
 	}
 	return covered / total * 100
+}
+
+func countFunctionStatements(fn *ssa.Function) int {
+	return len(fn.Blocks)
 }
