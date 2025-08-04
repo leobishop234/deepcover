@@ -556,7 +556,7 @@ func TestParseCoverageRow(t *testing.T) {
 	}
 }
 
-func TestApproxTotalCoverage(t *testing.T) {
+func TestCalculateTotalCoverage(t *testing.T) {
 	tests := []struct {
 		name           string
 		coverage       []Coverage
@@ -642,7 +642,7 @@ func TestApproxTotalCoverage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := approxTotalCoverage(tt.coverage)
+			result := calculateTotalCoverage(tt.coverage)
 
 			// Handle special case for empty slice or all zero statements
 			if len(tt.coverage) == 0 {

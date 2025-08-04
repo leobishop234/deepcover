@@ -39,6 +39,6 @@ func Deepcover(pkgPath, target string) (Result, error) {
 
 	return Result{
 		Coverage:            coverage,
-		ApproxTotalCoverage: approxTotalCoverage(coverage),
+		ApproxTotalCoverage: calculateTotalCoverage(coverage),
 	}, nil
 }

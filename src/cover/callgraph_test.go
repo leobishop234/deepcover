@@ -82,6 +82,10 @@ func TestBuildAnalysis(t *testing.T) {
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "TestTop"},
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "TestBottom"},
 				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "TestAlternative"},
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data", funcName: "init"},
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data.test", funcName: "init"},
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data.test", funcName: "init#1"},
+				{pkgPath: "github.com/leobishop234/deepcover/src/cover/test_data.test", funcName: "main"},
 			},
 			expectError: false,
 		},
@@ -193,20 +197,4 @@ func TestBuildAnalysis(t *testing.T) {
 			assert.Equal(t, len(tt.expectFuncs), len(cgs.targetNodes), "Number of found functions should match expected")
 		})
 	}
-}
-
-func TestInbuiltFunctionsAreFilteredOut(t *testing.T) {
-	// This test verifies that init functions are filtered out as a documented limitation
-	regex, err := regexp.Compile("init")
-	require.NoError(t, err)
-
-	cgs, err := buildAnalysis("github.com/leobishop234/deepcover/src/cover/test_data", regex)
-	require.NoError(t, err)
-
-	// Verify that no inbuilt functions are found
-	for functionID := range cgs.targetNodes {
-		assert.False(t, isInbuiltFunction(functionID.funcName), "Inbuilt function %s should be filtered out but was found", functionID.funcName)
-	}
-
-	t.Logf("Confirmed that %d functions were found, none of which are init functions", len(cgs.targetNodes))
 }

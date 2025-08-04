@@ -55,7 +55,7 @@ Deepcover outputs a table showing:
 - **FUNCTION**: The function name
 - **COVERAGE**: The percentage of the function covered by the tests
 
-Then an **Total:** this value is calculated dynamically from AST representations of dependency functions.
+**Total:** is also shown, this value is calculated dynamically from SSA representations of dependency functions.
 
 Example output:
 ```
@@ -68,17 +68,13 @@ github.com/leobishop234/deepcover/src/cover/test_data/example.go:16:          Al
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:9:         newInterface   100.0%
 github.com/leobishop234/deepcover/src/cover/test_data/interface.go:15:        Method         66.7%
 github.com/leobishop234/deepcover/src/cover/test_data/subpkg/subtest.go:12:   SubPkg         100.0%  
-Total: 91.67%
+Total: 91.68%
 ```
 
 ## Requirements
 
 - Go >= 1.22
 - The target package must be part of a Go module
-
-## Limitations
-
-- **inbuilt functions are not supported**: Functions named `init` (including compiler-generated variants like `init#1`, `init#2`, etc.) or `main` are filtered out and will not appear in coverage analysis. The is due to the complexity of reconciling them between different data representations.
 
 ## License
 

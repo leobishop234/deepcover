@@ -80,23 +80,11 @@ func buildSSAObjects(pkgs []*packages.Package) (*ssa.Program, []*ssa.Package, er
 	return ssaProg, ssaPkgs, nil
 }
 
-func isInbuiltFunction(name string) bool {
-	if name == "init" || (len(name) > 4 && name[:4] == "init" && name[4] == '#') {
-		return true
-	} else if name == "main" {
-		return true
-	}
-	return false
-}
-
 func findTargetSSAFunctions(pkgs []*ssa.Package, targetRegex *regexp.Regexp) map[functionID]*ssa.Function {
 	targetFuncs := make(map[functionID]*ssa.Function)
 	for _, ssaPkg := range pkgs {
 		for _, member := range ssaPkg.Members {
 			if fn, ok := member.(*ssa.Function); ok {
-				if isInbuiltFunction(fn.Name()) {
-					continue
-				}
 				if targetRegex.MatchString(fn.Name()) {
 					targetFuncs[functionID{pkgPath: ssaPkg.Pkg.Path(), funcName: fn.Name()}] = fn
 				}

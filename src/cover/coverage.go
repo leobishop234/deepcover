@@ -133,7 +133,7 @@ func parseCoverageRow(row string) (Coverage, bool, error) {
 	}, true, nil
 }
 
-func approxTotalCoverage(coverage []Coverage) float64 {
+func calculateTotalCoverage(coverage []Coverage) float64 {
 	if len(coverage) == 0 {
 		return 0
 	}
